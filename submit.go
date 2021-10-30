@@ -196,6 +196,6 @@ func init() {
 				}
 				return nil
 			},
-		}
+		},
 	})
 }
