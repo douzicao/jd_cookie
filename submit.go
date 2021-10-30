@@ -10,12 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var pinQQ = core.NewBucket("pinQQ")
+var pinWX = core.NewBucket("pinWX")
 var pinTG = core.NewBucket("pinTG")
 var pinWXMP = core.NewBucket("pinWXMP")
-var pin = func(class string) core.Bucket {
-	return core.Bucket("pin" + strings.ToUpper(class))
-}
+
 
 func init() {
 	//
@@ -117,7 +115,7 @@ func init() {
 						if string(k) == pt_pin && string(v) == s.Get() {
 							s.Reply(fmt.Sprintf("已解绑，%s。", pt_pin))
 							defer func() {
-								pinQQ.Set(string(k), "")
+								pinWX.Set(string(k), "")
 							}()
 						}
 						return nil
@@ -150,9 +148,6 @@ func init() {
 					}
 
 					value := fmt.Sprintf("pt_key=%s;pt_pin=%s;", ck.PtKey, ck.PtPin)
-					if s.GetImType() == "qq" {
-						xdd(value, fmt.Sprint(s.GetUserID()))
-					}
 					envs, err := qinglong.GetEnvs("JD_COOKIE")
 					if err != nil {
 						s.Reply(err)
@@ -201,77 +196,7 @@ func init() {
 				}
 				return nil
 			},
-		},
-		{
-			Rules:   []string{`raw pin=([^;=\s]+);\s*wskey=([^;=\s]+)`},
-			FindAll: true,
-			Handle: func(s core.Sender) interface{} {
-				s.Reply(s.Delete())
-				s.Disappear(time.Second * 20)
-				value := fmt.Sprintf("pin=%s;wskey=%s;", s.Get(0), s.Get(1))
-
-				pt_key, err := getKey(value)
-				if err == nil {
-					if strings.Contains(pt_key, "fake") {
-						return "无效的wskey，请重试。"
-					}
-				} else {
-					s.Reply(err)
-				}
-				ck := &JdCookie{
-					PtKey: pt_key,
-					PtPin: s.Get(0),
-				}
-				ck.Available()
-				envs, err := qinglong.GetEnvs("pin=")
-				if err != nil {
-					return err
-				}
-				pin(s.GetImType()).Set(ck.PtPin, s.GetUserID())
-				var envCK *qinglong.Env
-				var envWsCK *qinglong.Env
-				for i := range envs {
-					if strings.Contains(envs[i].Value, fmt.Sprintf("pin=%s;wskey=", ck.PtPin)) && envs[i].Name == "JD_WSCK" {
-						envWsCK = &envs[i]
-					} else if strings.Contains(envs[i].Value, fmt.Sprintf("pt_pin=%s;", ck.PtPin)) && envs[i].Name == "JD_COOKIE" {
-						envCK = &envs[i]
-					}
-				}
-				value2 := fmt.Sprintf("pt_key=%s;pt_pin=%s;", ck.PtKey, ck.PtPin)
-				if envCK == nil {
-					qinglong.AddEnv(qinglong.Env{
-						Name:  "JD_COOKIE",
-						Value: value2,
-					})
-				} else {
-					if envCK.Status != 0 {
-						envCK.Value = value2
-						if err := qinglong.UdpEnv(*envCK); err != nil {
-							return err
-						}
-					}
-				}
-				if envWsCK == nil {
-					if err := qinglong.AddEnv(qinglong.Env{
-						Name:  "JD_WSCK",
-						Value: value,
-					}); err != nil {
-						return err
-					}
-					return ck.Nickname + ",添加成功。"
-				} else {
-					envWsCK.Value = value
-					if envWsCK.Status != 0 {
-						if err := qinglong.Config.Req(qinglong.PUT, qinglong.ENVS, "/enable", []byte(`["`+envWsCK.ID+`"]`)); err != nil {
-							return err
-						}
-					}
-					envWsCK.Status = 0
-					if err := qinglong.UdpEnv(*envWsCK); err != nil {
-						return err
-					}
-					return ck.Nickname + ",更新成功。"
-				}
+		}
 			},
 		},
 	})
