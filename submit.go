@@ -197,7 +197,5 @@ func init() {
 				return nil
 			},
 		}
-			},
-		},
 	})
 }
