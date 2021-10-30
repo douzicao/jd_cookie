@@ -1,20 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jd_cookie.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/adong.go.txt" beforeDir="false" afterPath="$PROJECT_DIR$/adong.go.txt" afterDir="false" />
+    <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/asset.go" beforeDir="false" afterPath="$PROJECT_DIR$/asset.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/check.go.txt" beforeDir="false" afterPath="$PROJECT_DIR$/check.go.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/env.go.txt" beforeDir="false" afterPath="$PROJECT_DIR$/env.go.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/help.go.txt" beforeDir="false" afterPath="$PROJECT_DIR$/help.go.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/login.go.txt" beforeDir="false" afterPath="$PROJECT_DIR$/login.go.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/submit.go.txt" beforeDir="false" afterPath="$PROJECT_DIR$/submit.go.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tyt.go" beforeDir="false" afterPath="$PROJECT_DIR$/tyt.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/submit.go" beforeDir="false" afterPath="$PROJECT_DIR$/submit.go.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,6 +36,21 @@
       <option name="presentableId" value="Default" />
       <updated>1635595794886</updated>
     </task>
+    <task id="LOCAL-00001" summary="douzicao">
+      <created>1635595885723</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1635595885723</updated>
+    </task>
+    <task id="LOCAL-00002" summary="douzicao">
+      <created>1635595916036</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1635595916036</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -58,8 +63,11 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="douzicao" />
+    <option name="LAST_COMMIT_MESSAGE" value="douzicao" />
   </component>
 </project>
