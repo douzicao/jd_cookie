@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cdle/sillyGirl/core"
-	"github.com/cdle/sillyGirl/develop/qinglong"
+	"github.com/douzicao/sillyGirl/core"
+	"github.com/douzicao/sillyGirl/develop/qinglong"
 )
 
 func init() {
