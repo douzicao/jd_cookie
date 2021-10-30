@@ -286,7 +286,7 @@ func init() {
 					})
 				}
 				if len(cks) == 0 {
-					return "你尚未绑定账号，请私聊我你的pt_pin=XXXXXXXX;。"
+					return "你尚未绑定账号，请私聊我你的ck。"
 				}
 				if s.GetImType() == "wxmp" {
 					cs := []chan string{}
