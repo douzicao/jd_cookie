@@ -2,21 +2,21 @@ package jd_cookie
 
 import (
 	"fmt"
-	"strings"
 	"time"
+	"strings"
 
-	"github.com/cdle/sillyGirl/core"
-	"github.com/cdle/sillyGirl/develop/qinglong"
+	"github.com/douzicao/sillyGirl/core"
+	"github.com/douzicao/sillyGirl/develop/qinglong"
 	"github.com/gin-gonic/gin"
 )
 
-var pinQQ = core.NewBucket("pinQQ")
+var pinWX = core.NewBucket("pinWX")
 var pinTG = core.NewBucket("pinTG")
 var pinWXMP = core.NewBucket("pinWXMP")
-var pinWX = core.NewBucket("pinWX")
 var pin = func(class string) core.Bucket {
 	return core.Bucket("pin" + strings.ToUpper(class))
 }
+
 
 func init() {
 	//
@@ -101,61 +101,8 @@ func init() {
 		}
 	})
 	core.AddCommand("jd", []core.Function{
-		// {
-		// 	Rules: []string{`unbind ?`},
-		// 	Admin: true,
-		// 	Handle: func(s core.Sender) interface{} {
-		// 		s.Disappear(time.Second * 40)
-		// 		envs, err := qinglong.GetEnvs("JD_COOKIE")
-		// 		if err != nil {
-		// 			return err
-		// 		}
-		// 		if len(envs) == 0 {
-		// 			return "暂时无法操作。"
-		// 		}
-		// 		key := s.Get()
-		// 		pin := pin(s.GetImType())
-		// 		for _, env := range envs {
-		// 			pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-		// 			pin.Foreach(func(k, v []byte) error {
-		// 				if string(k) == pt_pin && string(v) == key {
-		// 					s.Reply(fmt.Sprintf("已解绑，%s。", pt_pin))
-		// 					pin.Set(string(k), "")
-		// 				}
-		// 				return nil
-		// 			})
-		// 		}
-		// 		return "操作完成"
-		// 	},
-		// },
-		// jd unbind 可以解绑名下所有京东账号
-		// 查询 支持匹配绑定的社交账号
-		// jd send pt_pin msg 给绑定该京东账号的发送消息,pt_pin填all则发给所有。
 		{
-			Rules: []string{"send ? ?"},
-			Admin: true,
-			Handle: func(s core.Sender) interface{} {
-				user_pin := s.Get()
-				msg := s.Get(1)
-				for _, tp := range []string{
-					"qq", "tg", "wx",
-				} {
-					core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
-						pt_pin := string(k)
-						user_id := string(v)
-						if pt_pin == user_pin || user_pin == "all" {
-							if push, ok := core.Pushs[tp]; ok {
-								push(user_id, msg)
-							}
-						}
-						return nil
-					})
-				}
-				return "发送完成"
-			},
-		},
-		{
-			Rules: []string{`unbind`},
+			Rules: []string{`unbind ?`},
 			Handle: func(s core.Sender) interface{} {
 				s.Disappear(time.Second * 40)
 				envs, err := qinglong.GetEnvs("JD_COOKIE")
@@ -165,14 +112,14 @@ func init() {
 				if len(envs) == 0 {
 					return "暂时无法操作。"
 				}
-				uid := fmt.Sprint(s.GetUserID())
 				for _, env := range envs {
 					pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-					pin := pin(s.GetImType())
-					pin.Foreach(func(k, v []byte) error {
-						if string(k) == pt_pin && string(v) == uid {
+					pin(s.GetImType()).Foreach(func(k, v []byte) error {
+						if string(k) == pt_pin && string(v) == s.Get() {
 							s.Reply(fmt.Sprintf("已解绑，%s。", pt_pin))
-							pin.Set(string(k), "")
+							defer func() {
+								pinWX.Set(string(k), "")
+							}()
 						}
 						return nil
 					})
@@ -204,9 +151,6 @@ func init() {
 					}
 
 					value := fmt.Sprintf("pt_key=%s;pt_pin=%s;", ck.PtKey, ck.PtPin)
-					if s.GetImType() == "qq" {
-						xdd(value, fmt.Sprint(s.GetUserID()))
-					}
 					envs, err := qinglong.GetEnvs("JD_COOKIE")
 					if err != nil {
 						s.Reply(err)
@@ -254,9 +198,9 @@ func init() {
 					}
 				}
 				return nil
-			},
+         },
 		},
-		{
+    	{
 			Rules:   []string{`raw pin=([^;=\s]+);\s*wskey=([^;=\s]+)`},
 			FindAll: true,
 			Handle: func(s core.Sender) interface{} {
@@ -330,3 +274,5 @@ func init() {
 		},
 	})
 }
+
+
