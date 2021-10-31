@@ -13,13 +13,12 @@ import (
 
 	"github.com/astaxie/beego/logs"
 	"github.com/beego/beego/v2/client/httplib"
-	"github.com/douzicao/sillyGirl/core"
+	"github.com/cdle/sillyGirl/core"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
 var jd_cookie = core.NewBucket("jd_cookie")
-
 
 var mhome sync.Map
 

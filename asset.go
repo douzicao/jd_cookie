@@ -13,8 +13,8 @@ import (
 
 	"github.com/beego/beego/v2/client/httplib"
 	"github.com/buger/jsonparser"
-	"github.com/douzicao/sillyGirl/core"
-	"github.com/douzicao/sillyGirl/develop/qinglong"
+	"github.com/cdle/sillyGirl/core"
+	"github.com/cdle/sillyGirl/develop/qinglong"
 )
 
 type JdCookie struct {
@@ -109,7 +109,6 @@ var USER_AGENTS = []string{
 	`jdltapp;iPhone;3.7.0;14.4;network/4g;hasUPPay/0;pushNoticeIsOpen/0;lang/zh_CN;model/iPhone12,3;hasOCPay/0;appBuild/1017;supportBestPay/0;addressid/;pv/3.49;apprpd/MyJD_Main;ref/MyJdMTAManager;psq/7;ads/;psn/9e0e0ea9c6801dfd53f2e50ffaa7f84c7b40cd15|6;jdv/0|;adk/;app_device/IOS;pap/JA2020_3112531|3.7.0|IOS 14.4;Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1`,
 	`jdltapp;iPad;3.7.0;14.4;network/wifi;hasUPPay/0;pushNoticeIsOpen/0;lang/zh_CN;model/iPad7,5;addressid/;hasOCPay/0;appBuild/1017;supportBestPay/0;pv/4.14;apprpd/MyJD_Main;ref/MyJdMTAManager;psq/3;ads/;psn/956c074c769cd2eeab2e36fca24ad4c9e469751a|8;jdv/0|;adk/;app_device/IOS;pap/JA2020_3112531|3.7.0|IOS 14.4;Mozilla/5.0 (iPad; CPU OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1`,
 }
-
 
 var ua = func() string {
 	return USER_AGENTS[int(time.Now().Unix())%len(USER_AGENTS)]
@@ -213,7 +212,7 @@ func init() {
 					pt_key := core.FetchCookieValue(env.Value, "pt_key")
 
 					for _, tp := range []string{
-						"wx", "tg",
+						"qq", "tg", "wx",
 					} {
 						core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
 							if string(k) == pt_pin && pt_pin != "" {
@@ -283,7 +282,7 @@ func init() {
 					})
 				}
 				if len(cks) == 0 {
-					return "你尚未绑定账号，请私聊我你的ck。"
+					return "你尚未绑定🐶东账号，请私聊我你的账号信息或者对我说“登录”。"
 				}
 				if s.GetImType() == "wxmp" {
 					cs := []chan string{}
@@ -429,10 +428,9 @@ func init() {
 
 func LimitJdCookie(cks []JdCookie, a string) []JdCookie {
 	ncks := []JdCookie{}
-	number := len(cks)
 	if s := strings.Split(a, "-"); len(s) == 2 {
 		for i := range cks {
-			if i+1 >= Int(s[0])%(number+1) && i+1 <= Int(s[1])%(number+1) {
+			if i+1 >= Int(s[0]) && i+1 <= Int(s[1]) {
 				ncks = append(ncks, cks[i])
 			}
 		}
@@ -440,18 +438,37 @@ func LimitJdCookie(cks []JdCookie, a string) []JdCookie {
 		xx := regexp.MustCompile(`(\d+)`).FindAllStringSubmatch(a, -1)
 		for i := range cks {
 			for _, x := range xx {
-				if i+1 == Int(x[1])%(number+1) {
+				if i+1 == Int(x[1]) {
 					ncks = append(ncks, cks[i])
 				}
 			}
-
 		}
-	} else if a != "" {
+	}
+	if len(ncks) == 0 {
 		a = strings.Replace(a, " ", "", -1)
 		for i := range cks {
 			if strings.Contains(cks[i].Note, a) || strings.Contains(cks[i].Nickname, a) || strings.Contains(cks[i].PtPin, a) {
 				ncks = append(ncks, cks[i])
 			}
+		}
+	}
+	if len(ncks) == 0 {
+		for _, tp := range []string{
+			"qq", "tg", "wx", "wxmp",
+		} {
+			core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
+
+				pt_pin := string(k)
+				account := string(v)
+				// fmt.Println(pt_pin, account)
+				for _, ck := range cks {
+					// fmt.Println(ck.PtPin, pt_pin)
+					if ck.PtPin == pt_pin && account == a {
+						ncks = append(ncks, ck)
+					}
+				}
+				return nil
+			})
 		}
 	}
 	return ncks
