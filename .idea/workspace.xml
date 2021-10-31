@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao">
-      <change beforePath="$PROJECT_DIR$/submit.go" beforeDir="false" afterPath="$PROJECT_DIR$/submit.go" afterDir="false" />
-    </list>
+    <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -241,7 +239,28 @@
       <option name="project" value="LOCAL" />
       <updated>1635657700580</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="douzicao">
+      <created>1635657790727</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1635657790727</updated>
+    </task>
+    <task id="LOCAL-00031" summary="douzicao">
+      <created>1635657939055</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1635657939055</updated>
+    </task>
+    <task id="LOCAL-00032" summary="douzicao">
+      <created>1635658074771</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1635658074771</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
