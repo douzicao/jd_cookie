@@ -13,7 +13,9 @@ import (
 var pinWX = core.NewBucket("pinWX")
 var pinTG = core.NewBucket("pinTG")
 var pinWXMP = core.NewBucket("pinWXMP")
-
+var pin = func(class string) core.Bucket {
+	return core.Bucket("pin" + strings.ToUpper(class))
+}
 
 
 func init() {

@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var jd_cookie = core.NewBucket("jd_cookie")
 
 
 var mhome sync.Map
