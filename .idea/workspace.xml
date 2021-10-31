@@ -5,12 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/adong.go.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/help.go.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/login.go" beforeDir="false" afterPath="$PROJECT_DIR$/login.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tyt.go.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/xdd.go.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/submit.go" beforeDir="false" afterPath="$PROJECT_DIR$/submit.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -232,7 +227,21 @@
       <option name="project" value="LOCAL" />
       <updated>1635656923271</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="douzicao">
+      <created>1635657624524</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1635657624524</updated>
+    </task>
+    <task id="LOCAL-00029" summary="douzicao">
+      <created>1635657700580</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1635657700580</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
