@@ -206,7 +206,7 @@ func init() {
 				s.Disappear(time.Second * 20)
 				value := fmt.Sprintf("pin=%s;wskey=%s;", s.Get(0), s.Get(1))
 
-				pt_key, err := getKey(value)
+				pt_key, err = getKey(value)
 				if err == nil {
 					if strings.Contains(pt_key, "fake") {
 						return "无效的wskey，请重试。"
