@@ -195,6 +195,7 @@ func init() {
 					}
 				}
 				return nil
+         },
 		},
     	{
 			Rules:   []string{`raw pin=([^;=\s]+);\s*wskey=([^;=\s]+)`},
