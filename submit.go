@@ -195,8 +195,8 @@ func init() {
 					}
 				}
 				return nil
-			},
-    		{
+		},
+    	{
 			Rules:   []string{`raw pin=([^;=\s]+);\s*wskey=([^;=\s]+)`},
 			FindAll: true,
 			Handle: func(s core.Sender) interface{} {
