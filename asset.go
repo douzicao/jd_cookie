@@ -283,7 +283,7 @@ func init() {
 					})
 				}
 				if len(cks) == 0 {
-					return "你尚未绑定账号，请私聊我你的ck。"
+					return "你尚未绑定账号，请私聊我你的ck。（发送查询推送每日资产/分享京东商品获取比价信息，点击链接还可能有隐藏优惠券。/获取ck工具 百度链接:https://pan.baidu.com/s/14SI7x43xhzMue658ek80Lg?pwd=6666?提取码:6666）"
 				}
 				if s.GetImType() == "wxmp" {
 					cs := []chan string{}
@@ -676,7 +676,7 @@ func (ck *JdCookie) QueryAsset() string {
 		msgs = append(msgs, fmt.Sprintf("京东账号：%s", ck.PtPin))
 		msgs = append(msgs, []string{
 			// "提醒：该账号已过期，请重新登录。多账号的🐑毛党员注意了，登录第2个账号的时候，不可以退出第1个账号，退出会造成账号过期。可以在登录第2个账号前清除浏览器cookie，或者使用浏览器的无痕模式。",
-			"提醒：该账号已过期，请对我说“登录“。”",
+			"提醒：该账号已过期，请重新绑定账号，请私聊我你的ck。（发送查询推送每日资产/分享京东商品获取比价信息，点击链接还可能有隐藏优惠券。/获取ck工具 百度链接:https://pan.baidu.com/s/14SI7x43xhzMue658ek80Lg?pwd=6666?提取码:6666）",
 		}...)
 	}
 	ck.PtPin, _ = url.QueryUnescape(ck.PtPin)
