@@ -2,7 +2,6 @@ package jd_cookie
 
 import (
 	"fmt"
-	"strings"
 	"time"
 	"encoding/json"
 	"net/http"
