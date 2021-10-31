@@ -13,8 +13,8 @@ import (
 
 	"github.com/beego/beego/v2/client/httplib"
 	"github.com/buger/jsonparser"
-	"github.com/douzicao/sillyGirl/core"
-	"github.com/douzicao/sillyGirl/develop/qinglong"
+	"github.com/cdle/sillyGirl/core"
+	"github.com/cdle/sillyGirl/develop/qinglong"
 )
 
 type JdCookie struct {
