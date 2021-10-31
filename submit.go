@@ -3,13 +3,8 @@ package jd_cookie
 import (
 	"fmt"
 	"time"
-	"encoding/json"
-	"net/http"
-	"net/url"
 	"strings"
 
-	"github.com/astaxie/beego/httplib"
-	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/douzicao/sillyGirl/develop/qinglong"
 	"github.com/gin-gonic/gin"

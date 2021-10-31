@@ -2,7 +2,6 @@ package jd_cookie
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"github.com/astaxie/beego/httplib"
 	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
-	"github.com/douzicao/sillyGirl/develop/qinglong"
 )
 
 var jdWSCK = core.NewBucket("jdWSCK")
