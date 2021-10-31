@@ -13,7 +13,7 @@ import (
 
 	"github.com/astaxie/beego/logs"
 	"github.com/beego/beego/v2/client/httplib"
-	"github.com/cdle/sillyGirl/core"
+	"github.com/douzicao/sillyGirl/core"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
