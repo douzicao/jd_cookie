@@ -206,9 +206,14 @@ func init() {
 				s.Disappear(time.Second * 20)
 				value := fmt.Sprintf("pin=%s;wskey=%s;", s.Get(0), s.Get(1))
 
-
-				s.Reply(err)
-
+				pt_key, err := getKey(value)
+				if err == nil {
+					if strings.Contains(pt_key, "fake") {
+						return "无效的wskey，请重试。"
+					}
+				} else {
+					s.Reply(err)
+				}
 				ck := &JdCookie{
 					PtKey: pt_key,
 					PtPin: s.Get(0),
