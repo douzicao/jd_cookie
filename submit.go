@@ -4,7 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"encoding/json"
+	"net/http"
+	"net/url"
+	"strings"
 
+	"github.com/astaxie/beego/httplib"
+	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/douzicao/sillyGirl/develop/qinglong"
 	"github.com/gin-gonic/gin"
@@ -13,6 +19,8 @@ import (
 var pinWX = core.NewBucket("pinWX")
 var pinTG = core.NewBucket("pinTG")
 var pinWXMP = core.NewBucket("pinWXMP")
+var jdWSCK = core.NewBucket("jdWSCK")
+
 
 
 func init() {
