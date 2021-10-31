@@ -205,7 +205,7 @@ func init() {
          },
 		},
     	{
-			Rules:   []string{`raw pin=([^;=\s]+);\s*wskey=([^;=\s]+)`},
+			Rules:   []string{`raw ^pin=.*;wskey=.*`},
 			FindAll: true,
 			Handle: func(s core.Sender) interface{} {
 				s.Reply(s.Delete())
