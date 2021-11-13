@@ -2,15 +2,10 @@ package jd_cookie
 
 import (
 	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/beego/beego/v2/client/httplib"
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/gorilla/websocket"
@@ -70,7 +65,6 @@ func initLogin() {
 			time.Sleep(time.Second)
 		}
 	})
-	go RunServer()
 	// if jd_cookie.GetBool("enable_aaron", false) {
 	// core.Senders <- &core.Faker{
 	// 	Message: "ql cron disable https://github.com/Aaron-lv/sync.git",
