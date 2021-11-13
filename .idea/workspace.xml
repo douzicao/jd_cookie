@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao">
-      <change afterPath="$PROJECT_DIR$/init.go" afterDir="false" />
-    </list>
+    <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -306,7 +304,14 @@
       <option name="project" value="LOCAL" />
       <updated>1636812980444</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="douzicao">
+      <created>1636813995599</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1636813995600</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

@@ -12,10 +12,7 @@ func init() {
 	}
 	initAsset()
 	initCheck()
-	initEnEn()
 	initEnv()
-	initHelp()
 	initLogin()
 	initSubmit()
-	initTyt()
 }
