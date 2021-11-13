@@ -15,6 +15,7 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/douzicao/sillyGirl/develop/qinglong"
+	"github.com/gin-gonic/gin"
 )
 
 type JdCookie struct {

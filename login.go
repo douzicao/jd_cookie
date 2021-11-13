@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/astaxie/beego/logs"
 	"github.com/beego/beego/v2/client/httplib"
-	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/gorilla/websocket"
 )
