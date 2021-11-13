@@ -2,23 +2,23 @@ package jd_cookie
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/douzicao/sillyGirl/develop/qinglong"
 	"github.com/gin-gonic/gin"
 )
 
-var pinWX = core.NewBucket("pinWX")
+var pinQQ = core.NewBucket("pinQQ")
 var pinTG = core.NewBucket("pinTG")
 var pinWXMP = core.NewBucket("pinWXMP")
+var pinWX = core.NewBucket("pinWX")
 var pin = func(class string) core.Bucket {
 	return core.Bucket("pin" + strings.ToUpper(class))
 }
 
-
-func init() {
+func initSubmit() {
 	//
 	core.Server.POST("/cookie", func(c *gin.Context) {
 		cookie := c.Query("ck")
@@ -102,7 +102,29 @@ func init() {
 	})
 	core.AddCommand("jd", []core.Function{
 		{
-			Rules: []string{`unbind ?`},
+			Rules: []string{"send ? ?"},
+			Admin: true,
+			Handle: func(s core.Sender) interface{} {
+				user_pin := s.Get()
+				msg := s.Get(1)
+				for _, tp := range []string{
+					"qq", "tg", "wx",
+				} {
+					core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
+						pt_pin := string(k)
+						if pt_pin == user_pin || user_pin == "all" {
+							if push, ok := core.Pushs[tp]; ok {
+								push(string(v), msg)
+							}
+						}
+						return nil
+					})
+				}
+				return "发送完成"
+			},
+		},
+		{
+			Rules: []string{`unbind`},
 			Handle: func(s core.Sender) interface{} {
 				s.Disappear(time.Second * 40)
 				envs, err := qinglong.GetEnvs("JD_COOKIE")
@@ -112,14 +134,14 @@ func init() {
 				if len(envs) == 0 {
 					return "暂时无法操作。"
 				}
+				uid := fmt.Sprint(s.GetUserID())
 				for _, env := range envs {
 					pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-					pin(s.GetImType()).Foreach(func(k, v []byte) error {
-						if string(k) == pt_pin && string(v) == s.Get() {
+					pin := pin(s.GetImType())
+					pin.Foreach(func(k, v []byte) error {
+						if string(k) == pt_pin && string(v) == uid {
 							s.Reply(fmt.Sprintf("已解绑，%s。", pt_pin))
-							defer func() {
-								pinWX.Set(string(k), "")
-							}()
+							pin.Set(string(k), "")
 						}
 						return nil
 					})
@@ -191,6 +213,7 @@ func init() {
 							s.Reply(err)
 							continue
 						}
+						assets.Delete(ck.PtPin)
 						rt := ck.Nickname + "，更新成功。"
 						core.NotifyMasters(rt)
 						s.Reply(rt)
