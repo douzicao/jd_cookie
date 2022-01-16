@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -152,6 +151,9 @@ func initAsset() {
 			Rules: []string{`asset ?`, `raw ^` + jd_cookie.Get("asset_query_alias", "查询") + ` (\S+)$`},
 			Admin: true,
 			Handle: func(s core.Sender) interface{} {
+				if s.GetImType() == "wxsv" && !s.IsAdmin() && jd_cookie.GetBool("ban_wxsv") {
+					return "不支持此功能。"
+				}
 				if s.GetImType() == "tg" {
 					s.Disappear(time.Second * 40)
 				}
@@ -208,7 +210,7 @@ func initAsset() {
 								})
 							}
 						}()
-						return "您有多个账号，输入任意字符将依次为您展示查询结果："
+						return "您有多个账号，输入任意字符将依次为您展示查询结果(公众号查询可能失败，请多试几次)："
 					}
 
 				} else {
@@ -299,6 +301,9 @@ func initAsset() {
 		{
 			Rules: []string{`^` + jd_cookie.Get("asset_query_alias", "查询") + `$`},
 			Handle: func(s core.Sender) interface{} {
+				if s.GetImType() == "wxsv" && !s.IsAdmin() && jd_cookie.GetBool("ban_wxsv") {
+					return "不支持此功能。"
+				}
 				if s.GetImType() != "wxmp" {
 					go func() {
 						l := int64(jd_cookie.GetInt("query_wait_time"))
@@ -352,7 +357,7 @@ func initAsset() {
 				})
 
 				if len(cks) == 0 {
-					return "你尚未绑定账号，请私聊我你的ck。"
+					return "你尚未绑定🐶东账号，请私聊我你的账号信息或者对我说“挂机方法”。"
 				}
 				if s.GetImType() == "wxmp" {
 					cs := []chan string{}
