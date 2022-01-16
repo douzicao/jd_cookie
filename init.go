@@ -1,11 +1,21 @@
 package jd_cookie
 
 import (
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
+
+	"github.com/beego/beego/v2/core/logs"
+	"github.com/cdle/sillyGirl/core"
+	"github.com/cdle/sillyGirl/develop/qinglong"
+	"golang.org/x/net/proxy"
 )
 
 func init() {
+	if !core.Bucket("qinglong").GetBool("enable_qinglong", true) {
+		return
+	}
 	data, _ := os.ReadFile("dev.go")
 	if !strings.Contains(string(data), "jd_cookie") && !jd_cookie.GetBool("enable_jd_cookie") {
 		return
@@ -15,4 +25,5 @@ func init() {
 	initEnv()
 	initLogin()
 	initSubmit()
+	initNotify()
 }

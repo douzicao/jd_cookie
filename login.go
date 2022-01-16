@@ -2,13 +2,16 @@ package jd_cookie
 
 import (
 	"encoding/base64"
+	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/beego/beego/v2/client/httplib"
+	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
-	"github.com/gorilla/websocket"
+	"github.com/douzicaoq/sillyGirl/develop/qinglong"
 )
 
 var jd_cookie = core.NewBucket("jd_cookie")
@@ -65,17 +68,9 @@ func initLogin() {
 			time.Sleep(time.Second)
 		}
 	})
-	// if jd_cookie.GetBool("enable_aaron", false) {
-	// core.Senders <- &core.Faker{
-	// 	Message: "ql cron disable https://github.com/Aaron-lv/sync.git",
-	// }
-	// core.Senders <- &core.Faker{
-	// 	Message: "ql cron disable task Aaron-lv_sync_jd_scripts_jd_city.js",
-	// }
-	// }
 }
 
-var c *websocket.Conn
+//var c *websocket.Conn
 
 
 func decode(encodeed string) string {

@@ -111,7 +111,6 @@ var USER_AGENTS = []string{
 	`jdltapp;iPad;3.7.0;14.4;network/wifi;hasUPPay/0;pushNoticeIsOpen/0;lang/zh_CN;model/iPad7,5;addressid/;hasOCPay/0;appBuild/1017;supportBestPay/0;pv/4.14;apprpd/MyJD_Main;ref/MyJdMTAManager;psq/3;ads/;psn/956c074c769cd2eeab2e36fca24ad4c9e469751a|8;jdv/0|;adk/;app_device/IOS;pap/JA2020_3112531|3.7.0|IOS 14.4;Mozilla/5.0 (iPad; CPU OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1`,
 }
 
-
 var ua = func() string {
 	return USER_AGENTS[int(time.Now().Unix())%len(USER_AGENTS)]
 }
@@ -160,7 +159,11 @@ func initAsset() {
 				if a == "300" {
 					a = "3"
 				}
-				envs, err := qinglong.GetEnvs("JD_COOKIE")
+				err, qls := qinglong.QinglongSC(s)
+				if err != nil {
+					return err
+				}
+				envs, err := GetEnvs(qls[0], "JD_COOKIE")
 				if err != nil {
 					return err
 				}
@@ -183,8 +186,8 @@ func initAsset() {
 				if len(cks) == 0 {
 					return "没有匹配的京东账号。"
 				}
-				if s.GetImType() == "wxmp" {
-
+				ke := core.Bucket("wxmp").GetBool("isKe?", false)
+				if s.GetImType() == "wxmp" && !ke {
 					if len(cks) <= 2 {
 						cs := []chan string{}
 						for _, ck := range cks {
@@ -221,30 +224,76 @@ func initAsset() {
 			Cron:  jd_cookie.Get("asset_push"),
 			Admin: true,
 			Handle: func(_ core.Sender) interface{} {
-				envs, _ := qinglong.GetEnvs("JD_COOKIE")
-				for _, env := range envs {
-					pt_pin := core.FetchCookieValue(env.Value, "pt_pin")
-					pt_key := core.FetchCookieValue(env.Value, "pt_key")
-
-					for _, tp := range []string{
-						"qq", "tg", "wx",
-					} {
-						core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
-							if string(k) == pt_pin && pt_pin != "" {
-								if push, ok := core.Pushs[tp]; ok {
-									time.Sleep(time.Second)
-									push(string(v), GetAsset(&JdCookie{
-										PtPin: pt_pin,
-										PtKey: pt_key,
-									}))
-								}
+				qqGroup := jd_cookie.GetInt("qqGroup")
+				for _, tp := range []string{
+					"qq", "tg", "wx",
+				} {
+					var fs []func()
+					core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
+						if string(k) != "" {
+							jn := &JdNotify{
+								ID: string(k),
 							}
-							return nil
-						})
+							jdNotify.First(jn)
+							if push, ok := core.Pushs[tp]; ok {
+								fs = append(fs, func() {
+									push(string(v), GetAsset(&JdCookie{
+										PtPin: jn.ID,
+										PtKey: jn.PtKey,
+									}), qqGroup, "")
+								})
+							}
+						}
+						return nil
+					})
+					if len(fs) != 0 {
+						for _, f := range fs {
+							f()
+						}
 					}
-
+					time.Sleep(time.Second)
 				}
+
 				return "推送完成"
+			},
+		},
+		{
+			Rules: []string{`myCookie`},
+			Cron:  jd_cookie.Get("asset_push"),
+			Handle: func(s core.Sender) interface{} {
+				cookies := []string{}
+				tp := s.GetImType()
+				uid := s.GetUserID()
+
+				core.Bucket("pin" + strings.ToUpper(tp)).Foreach(func(k, v []byte) error {
+					if string(k) != "" && string(v) == uid {
+						jn := &JdNotify{
+							ID: string(k),
+						}
+						jdNotify.First(jn)
+						cookies = append(cookies, fmt.Sprintf("pt_key=%s;pt_pin=%s;", jn.PtKey, jn.ID))
+					}
+					return nil
+				})
+
+				s.Reply(fmt.Sprintf("已为你找到%d条结果，请在60秒内回复“n”，将依次为你展示。", len(cookies)))
+				var ids = []string{}
+				for i := range cookies {
+					if s.Await(s, func(s core.Sender) interface{} {
+						s.RecallMessage(s.GetMessageID())
+						return nil
+					}, time.Second*60) != "n" {
+						return "操作中断。"
+					}
+					if len(ids) > 0 {
+						s.RecallMessage(ids)
+					}
+					ids, _ = s.Reply(cookies[i])
+				}
+				if len(ids) > 0 {
+					s.RecallMessage(ids)
+				}
+				return "操作完成。"
 			},
 		},
 		{
@@ -272,36 +321,36 @@ func initAsset() {
 						}
 					}()
 				}
-
 				if groupCode := jd_cookie.Get("groupCode"); !s.IsAdmin() && groupCode != "" && s.GetChatID() != 0 && !strings.Contains(groupCode, fmt.Sprint(s.GetChatID())) {
 					return nil
 				}
-				s.Disappear(time.Second * 40)
-				envs, err := qinglong.GetEnvs("JD_COOKIE")
-				if err != nil {
-					return err
-				}
-				if len(envs) == 0 {
-					return "暂时无法查询。"
-				}
-				cks := []JdCookie{}
-				for _, env := range envs {
-					pt_key := FetchJdCookieValue("pt_key", env.Value)
-					if env.Status != 0 {
-						pt_key = ""
-					}
-					pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-					pin(s.GetImType()).Foreach(func(k, v []byte) error {
-						if string(k) == pt_pin && string(v) == fmt.Sprint(s.GetUserID()) {
-							cks = append(cks, JdCookie{
-								PtKey: pt_key,
-								PtPin: pt_pin,
-								Note:  env.Remarks,
-							})
+				if query_time := jd_cookie.Get("query_time"); query_time != "" {
+					res := regexp.MustCompile(`\d{2}:\d{2}`).FindAllString(query_time, -1)
+
+					if len(res) == 2 {
+						n := time.Now().Format("15:04")
+
+						if !(n >= res[0] && n <= res[1]) {
+							return query_time
 						}
-						return nil
-					})
+					}
 				}
+				s.Disappear(time.Second * 40)
+				cks := []JdCookie{}
+				pin(s.GetImType()).Foreach(func(k, v []byte) error {
+					if string(v) == fmt.Sprint(s.GetUserID()) {
+						jn := &JdNotify{
+							ID: string(k),
+						}
+						jdNotify.First(jn)
+						cks = append(cks, JdCookie{
+							PtKey: jn.PtKey,
+							PtPin: string(k),
+						})
+					}
+					return nil
+				})
+
 				if len(cks) == 0 {
 					return "你尚未绑定账号，请私聊我你的ck。"
 				}
@@ -336,88 +385,88 @@ func initAsset() {
 				return nil
 			},
 		},
-		{
-			Rules: []string{`today bean(?)`},
-			Admin: true,
-			Handle: func(s core.Sender) interface{} {
-				a := s.Get()
-				envs, err := qinglong.GetEnvs("JD_COOKIE")
-				if err != nil {
-					return err
-				}
-				if len(envs) == 0 {
-					return "青龙没有京东账号。"
-				}
-				cks := []JdCookie{}
-				for _, env := range envs {
-					pt_key := FetchJdCookieValue("pt_key", env.Value)
-					pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-					if pt_key != "" && pt_pin != "" {
-						cks = append(cks, JdCookie{
-							PtKey: pt_key,
-							PtPin: pt_pin,
-							Note:  env.Remarks,
-						})
-					}
-				}
-				cks = LimitJdCookie(cks, a)
-				if len(cks) == 0 {
-					return "没有匹配的京东账号。"
-				}
-				var beans []chan int
-				for _, ck := range cks {
-					var bean = make(chan int)
-					go GetTodayBean(&ck, bean)
-					beans = append(beans, bean)
-				}
-				all := 0
-				for i := range beans {
-					all += <-beans[i]
-				}
-				return fmt.Sprintf("今日收入%d京豆。", all)
-			},
-		},
-		{
-			Rules: []string{`yestoday bean(?)`},
-			Admin: true,
-			Handle: func(s core.Sender) interface{} {
-				a := s.Get()
-				envs, err := qinglong.GetEnvs("JD_COOKIE")
-				if err != nil {
-					return err
-				}
-				if len(envs) == 0 {
-					return "青龙没有京东账号。"
-				}
-				cks := []JdCookie{}
-				for _, env := range envs {
-					pt_key := FetchJdCookieValue("pt_key", env.Value)
-					pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-					if pt_key != "" && pt_pin != "" {
-						cks = append(cks, JdCookie{
-							PtKey: pt_key,
-							PtPin: pt_pin,
-							Note:  env.Remarks,
-						})
-					}
-				}
-				cks = LimitJdCookie(cks, a)
-				if len(cks) == 0 {
-					return "没有匹配的京东账号。"
-				}
-				var beans []chan int
-				for _, ck := range cks {
-					var bean = make(chan int)
-					go GetYestodayBean(&ck, bean)
-					beans = append(beans, bean)
-				}
-				all := 0
-				for i := range beans {
-					all += <-beans[i]
-				}
-				return fmt.Sprintf("昨日收入%d京豆。", all)
-			},
-		},
+		// {
+		// 	Rules: []string{`today bean(?)`},
+		// 	Admin: true,
+		// 	Handle: func(s core.Sender) interface{} {
+		// 		a := s.Get()
+		// 		envs, err := GetEnvs("JD_COOKIE")
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		if len(envs) == 0 {
+		// 			return "青龙没有京东账号。"
+		// 		}
+		// 		cks := []JdCookie{}
+		// 		for _, env := range envs {
+		// 			pt_key := FetchJdCookieValue("pt_key", env.Value)
+		// 			pt_pin := FetchJdCookieValue("pt_pin", env.Value)
+		// 			if pt_key != "" && pt_pin != "" {
+		// 				cks = append(cks, JdCookie{
+		// 					PtKey: pt_key,
+		// 					PtPin: pt_pin,
+		// 					Note:  env.Remarks,
+		// 				})
+		// 			}
+		// 		}
+		// 		cks = LimitJdCookie(cks, a)
+		// 		if len(cks) == 0 {
+		// 			return "没有匹配的京东账号。"
+		// 		}
+		// 		var beans []chan int
+		// 		for _, ck := range cks {
+		// 			var bean = make(chan int)
+		// 			go GetTodayBean(&ck, bean)
+		// 			beans = append(beans, bean)
+		// 		}
+		// 		all := 0
+		// 		for i := range beans {
+		// 			all += <-beans[i]
+		// 		}
+		// 		return fmt.Sprintf("今日收入%d京豆。", all)
+		// 	},
+		// },
+		// {
+		// 	Rules: []string{`yestoday bean(?)`},
+		// 	Admin: true,
+		// 	Handle: func(s core.Sender) interface{} {
+		// 		a := s.Get()
+		// 		envs, err := GetEnvs("JD_COOKIE")
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		if len(envs) == 0 {
+		// 			return "青龙没有京东账号。"
+		// 		}
+		// 		cks := []JdCookie{}
+		// 		for _, env := range envs {
+		// 			pt_key := FetchJdCookieValue("pt_key", env.Value)
+		// 			pt_pin := FetchJdCookieValue("pt_pin", env.Value)
+		// 			if pt_key != "" && pt_pin != "" {
+		// 				cks = append(cks, JdCookie{
+		// 					PtKey: pt_key,
+		// 					PtPin: pt_pin,
+		// 					Note:  env.Remarks,
+		// 				})
+		// 			}
+		// 		}
+		// 		cks = LimitJdCookie(cks, a)
+		// 		if len(cks) == 0 {
+		// 			return "没有匹配的京东账号。"
+		// 		}
+		// 		var beans []chan int
+		// 		for _, ck := range cks {
+		// 			var bean = make(chan int)
+		// 			go GetYestodayBean(&ck, bean)
+		// 			beans = append(beans, bean)
+		// 		}
+		// 		all := 0
+		// 		for i := range beans {
+		// 			all += <-beans[i]
+		// 		}
+		// 		return fmt.Sprintf("昨日收入%d京豆。", all)
+		// 	},
+		// },
 		{
 			Rules: []string{`imOf ?`},
 			Admin: true,
@@ -445,42 +494,42 @@ func initAsset() {
 				return rt
 			},
 		},
-		{
-			Rules: []string{`bean(?)`},
-			Admin: true,
-			Handle: func(s core.Sender) interface{} {
-				a := s.Get()
-				envs, err := qinglong.GetEnvs("JD_COOKIE")
-				if err != nil {
-					return err
-				}
-				if len(envs) == 0 {
-					return "青龙没有京东账号。"
-				}
-				cks := []JdCookie{}
-				for _, env := range envs {
-					pt_key := FetchJdCookieValue("pt_key", env.Value)
-					pt_pin := FetchJdCookieValue("pt_pin", env.Value)
-					if pt_key != "" && pt_pin != "" {
-						cks = append(cks, JdCookie{
-							PtKey: pt_key,
-							PtPin: pt_pin,
-							Note:  env.Remarks,
-						})
-					}
-				}
-				cks = LimitJdCookie(cks, a)
-				if len(cks) == 0 {
-					return "没有匹配的京东账号。"
-				}
-				all := 0
-				for _, ck := range cks {
-					ck.Available()
-					all += Int(ck.BeanNum)
-				}
-				return fmt.Sprintf("总计%d京豆。", all)
-			},
-		},
+		// {
+		// 	Rules: []string{`bean(?)`},
+		// 	Admin: true,
+		// 	Handle: func(s core.Sender) interface{} {
+		// 		a := s.Get()
+		// 		envs, err := GetEnvs("JD_COOKIE")
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		if len(envs) == 0 {
+		// 			return "青龙没有京东账号。"
+		// 		}
+		// 		cks := []JdCookie{}
+		// 		for _, env := range envs {
+		// 			pt_key := FetchJdCookieValue("pt_key", env.Value)
+		// 			pt_pin := FetchJdCookieValue("pt_pin", env.Value)
+		// 			if pt_key != "" && pt_pin != "" {
+		// 				cks = append(cks, JdCookie{
+		// 					PtKey: pt_key,
+		// 					PtPin: pt_pin,
+		// 					Note:  env.Remarks,
+		// 				})
+		// 			}
+		// 		}
+		// 		cks = LimitJdCookie(cks, a)
+		// 		if len(cks) == 0 {
+		// 			return "没有匹配的京东账号。"
+		// 		}
+		// 		all := 0
+		// 		for _, ck := range cks {
+		// 			ck.Available()
+		// 			all += Int(ck.BeanNum)
+		// 		}
+		// 		return fmt.Sprintf("总计%d京豆。", all)
+		// 	},
+		// },
 	})
 	go func() {
 		for {
@@ -542,7 +591,7 @@ func LimitJdCookie(cks []JdCookie, a string) []JdCookie {
 		}
 	}
 	if len(ncks) == 0 {
-		a = strings.Replace(a, " ", "", -1)
+		a = strings.Replace(a, "", "", -1)
 		for i := range cks {
 			if strings.Contains(cks[i].Note, a) || strings.Contains(cks[i].Nickname, a) || strings.Contains(cks[i].PtPin, a) {
 				ncks = append(ncks, cks[i])
@@ -610,197 +659,6 @@ var Float64 = func(s string) float64 {
 	return i
 }
 
-func (ck *JdCookie) QueryAsset() string {
-	msgs := []string{}
-	if ck.Note != "" {
-		msgs = append(msgs, fmt.Sprintf("账号备注：%s", ck.Note))
-	}
-	asset := Asset{}
-	if ck.Available() {
-		// msgs = append(msgs, fmt.Sprintf("用户等级：%v", ck.UserLevel))
-		// msgs = append(msgs, fmt.Sprintf("等级名称：%v", ck.LevelName))
-		cookie := fmt.Sprintf("pt_key=%s;pt_pin=%s;", ck.PtKey, ck.PtPin)
-		var rpc = make(chan []RedList)
-		var fruit = make(chan string)
-		var pet = make(chan string)
-		var gold = make(chan int64)
-		var egg = make(chan int64)
-		var tyt = make(chan string)
-		var mmc = make(chan int64)
-		var zjb = make(chan int64)
-		go redPacket(cookie, rpc)
-		go initFarm(cookie, fruit)
-		go initPetTown(cookie, pet)
-		go jsGold(cookie, gold)
-		go jxncEgg(cookie, egg)
-		go tytCoupon(cookie, tyt)
-		go mmCoin(cookie, mmc)
-		go jdzz(cookie, zjb)
-		today := time.Now().Local().Format("2006-01-02")
-		yestoday := time.Now().Local().Add(-time.Hour * 24).Format("2006-01-02")
-		page := 1
-		end := false
-		for {
-			if end {
-				if asset.Bean.YestodayIn != 0 {
-					msgs = append(msgs,
-						fmt.Sprintf("昨日收入：%d京豆", asset.Bean.YestodayIn),
-					)
-				}
-				if asset.Bean.YestodayOut != 0 {
-					msgs = append(msgs,
-						fmt.Sprintf("昨日支出：%d京豆", asset.Bean.YestodayOut),
-					)
-				}
-				if asset.Bean.TodayIn != 0 {
-					msgs = append(msgs,
-						fmt.Sprintf("今日收入：%d京豆", asset.Bean.TodayIn),
-					)
-				}
-				if asset.Bean.TodayOut != 0 {
-					msgs = append(msgs,
-						fmt.Sprintf("今日支出：%d京豆", asset.Bean.TodayOut),
-					)
-				}
-				break
-			}
-			bds := getJingBeanBalanceDetail(page, cookie)
-			if bds == nil {
-				end = true
-				msgs = append(msgs, "京豆数据异常")
-				break
-			}
-			for _, bd := range bds {
-				amount := Int(bd.Amount)
-				if strings.Contains(bd.Date, today) {
-					if amount > 0 {
-						asset.Bean.TodayIn += amount
-					} else {
-						asset.Bean.TodayOut += -amount
-					}
-				} else if strings.Contains(bd.Date, yestoday) {
-					if amount > 0 {
-						asset.Bean.YestodayIn += amount
-					} else {
-						asset.Bean.YestodayOut += -amount
-					}
-				} else {
-					end = true
-					break
-				}
-			}
-			page++
-		}
-		msgs = append(msgs, fmt.Sprintf("当前京豆：%v京豆", ck.BeanNum))
-		ysd := int(time.Now().Add(24 * time.Hour).Unix())
-		if rps := <-rpc; len(rps) != 0 {
-			for _, rp := range rps {
-				b := Float64(rp.Balance)
-				asset.RedPacket.Total += b
-				if strings.Contains(rp.ActivityName, "京喜") || strings.Contains(rp.OrgLimitStr, "京喜") {
-					asset.RedPacket.Jx += b
-					if ysd >= rp.EndTime {
-						asset.RedPacket.ToExpireJx += b
-						asset.RedPacket.ToExpire += b
-					}
-				} else if strings.Contains(rp.ActivityName, "极速版") {
-					asset.RedPacket.Js += b
-					if ysd >= rp.EndTime {
-						asset.RedPacket.ToExpireJs += b
-						asset.RedPacket.ToExpire += b
-					}
-
-				} else if strings.Contains(rp.ActivityName, "京东健康") {
-					asset.RedPacket.Jk += b
-					if ysd >= rp.EndTime {
-						asset.RedPacket.ToExpireJk += b
-						asset.RedPacket.ToExpire += b
-					}
-				} else {
-					asset.RedPacket.Jd += b
-					if ysd >= rp.EndTime {
-						asset.RedPacket.ToExpireJd += b
-						asset.RedPacket.ToExpire += b
-					}
-				}
-			}
-			e := func(m float64) string {
-				if m > 0 {
-					return fmt.Sprintf(`(今日过期%.2f)`, m)
-				}
-				return ""
-			}
-			if asset.RedPacket.Total != 0 {
-				msgs = append(msgs, fmt.Sprintf("所有红包：%.2f%s元🧧", asset.RedPacket.Total, e(asset.RedPacket.ToExpire)))
-				if asset.RedPacket.Jx != 0 {
-					msgs = append(msgs, fmt.Sprintf("京喜红包：%.2f%s元", asset.RedPacket.Jx, e(asset.RedPacket.ToExpireJx)))
-				}
-				if asset.RedPacket.Js != 0 {
-					msgs = append(msgs, fmt.Sprintf("极速红包：%.2f%s元", asset.RedPacket.Js, e(asset.RedPacket.ToExpireJs)))
-				}
-				if asset.RedPacket.Jd != 0 {
-					msgs = append(msgs, fmt.Sprintf("京东红包：%.2f%s元", asset.RedPacket.Jd, e(asset.RedPacket.ToExpireJd)))
-				}
-				if asset.RedPacket.Jk != 0 {
-					msgs = append(msgs, fmt.Sprintf("健康红包：%.2f%s元", asset.RedPacket.Jk, e(asset.RedPacket.ToExpireJk)))
-				}
-			}
-
-		} else {
-			// msgs = append(msgs, "暂无红包数据🧧")
-		}
-		msgs = append(msgs, fmt.Sprintf("东东农场：%s", <-fruit))
-		msgs = append(msgs, fmt.Sprintf("东东萌宠：%s", <-pet))
-		gn := <-gold
-		if gn >= 30000 {
-			msgs = append(msgs, fmt.Sprintf("极速金币：%d(≈%.2f元)💰", gn, float64(gn)/10000))
-		}
-		zjbn := <-zjb
-		if zjbn >= 50000 {
-			msgs = append(msgs, fmt.Sprintf("京东赚赚：%d金币(≈%.2f元)💰", zjbn, float64(zjbn)/10000))
-		} else {
-			// msgs = append(msgs, fmt.Sprintf("京东赚赚：暂无数据"))
-		}
-		mmcCoin := <-mmc
-		if mmcCoin >= 3000 {
-			msgs = append(msgs, fmt.Sprintf("京东秒杀：%d秒秒币(≈%.2f元)💰", mmcCoin, float64(mmcCoin)/1000))
-		} else {
-			// msgs = append(msgs, fmt.Sprintf("京东秒杀：暂无数据"))
-		}
-		if tyt := <-tyt; tyt != "" {
-			msgs = append(msgs, fmt.Sprintf("推一推券：%s", tyt))
-		}
-		if egg := <-egg; egg != 0 {
-			msgs = append(msgs, fmt.Sprintf("惊喜牧场：%d枚鸡蛋🥚", egg))
-		}
-		// if ck.Note != "" {
-		// 	msgs = append([]string{
-		// 		fmt.Sprintf("账号备注：%s", ck.Note),
-		// 	}, msgs...)
-		// }
-		if runtime.GOOS != "darwin" {
-			if ck.Nickname != "" {
-				msgs = append([]string{
-					fmt.Sprintf("账号昵称：%s", ck.Nickname),
-				}, msgs...)
-			}
-		}
-	} else {
-		ck.PtPin, _ = url.QueryUnescape(ck.PtPin)
-		msgs = append(msgs, fmt.Sprintf("京东账号：%s", ck.PtPin))
-		msgs = append(msgs, []string{
-			// "提醒：该账号已过期，请重新登录。多账号的🐑毛党员注意了，登录第2个账号的时候，不可以退出第1个账号，退出会造成账号过期。可以在登录第2个账号前清除浏览器cookie，或者使用浏览器的无痕模式。",
-			"提醒：该账号已过期，请更新CK",
-		}...)
-	}
-	ck.PtPin, _ = url.QueryUnescape(ck.PtPin)
-	rt := strings.Join(msgs, "\n")
-	if jd_cookie.GetBool("tuyalize", false) == true {
-
-	}
-	return rt
-}
-
 type BeanDetail struct {
 	Date         string `json:"date"`
 	Amount       string `json:"amount"`
@@ -818,6 +676,7 @@ func getJingBeanBalanceDetail(page int, cookie string) []BeanDetail {
 	req.Header("Host", "api.m.jd.com")
 	req.Header("Content-Type", "application/x-www-form-urlencoded")
 	req.Header("Cookie", cookie)
+
 	req.Body(fmt.Sprintf(`body={"pageSize": "20", "page": "%d"}&appid=ld`, page))
 	data, err := req.Bytes()
 	if err != nil {
@@ -859,15 +718,20 @@ func redPacket(cookie string, rpc chan []RedList) {
 		Msg     string `json:"msg"`
 	}
 	a := AutoGenerated{}
-	req := httplib.Get(`https://m.jingxi.com/user/info/QueryUserRedEnvelopesV2?type=1&orgFlag=JD_PinGou_New&page=1&cashRedType=1&redBalanceFlag=1&channel=1&_=` + fmt.Sprint(time.Now().Unix()) + `&sceneval=2&g_login_type=1&g_ty=ls`)
+	req := httplib.Get(`https://m.jingxi.com/user/info/QueryUserRedEnvelopesV2?type=1&orgFlag=JD_PinGou_New&page=1&cashRedType=1&redBalanceFlag=1&channel=3&_=` + fmt.Sprint(time.Now().Unix()) + `&sceneval=2&g_login_type=1&g_ty=ls`)
 	req.Header("User-Agent", ua())
-	req.Header("Host", "m.jingxi.com")
-	req.Header("Accept", "*/*")
-	req.Header("Connection", "keep-alive")
-	req.Header("Accept-Language", "zh-cn")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
-	req.Header("Referer", "https://st.jingxi.com/my/redpacket.shtml?newPg=App")
+	req.Header("authority", "m.jingxi.com")
+	req.Header("sec-ch-ua", "\"Not A;Brand\";v=\"99\", \"Chromium\";v=\"96\", \"Google Chrome\";v=\"96\"")
+	req.Header("sec-ch-ua-mobile", "?0")
+	req.Header("sec-ch-ua-platform", "\"macOS\"")
+	// req.Header("accept", "*/*")
+	req.Header("sec-fetch-site", "same-site")
+	req.Header("sec-fetch-mode", "no-cors")
+	req.Header("sec-fetch-dest", "script")
+	req.Header("referer", "https://st.jingxi.com/")
+	req.Header("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")
 	req.Header("Cookie", cookie)
+	req.SetTimeout(time.Second, time.Second)
 	data, _ := req.Bytes()
 	json.Unmarshal(data, &a)
 	rpc <- a.Data.UseRedInfo.RedList
@@ -1009,37 +873,36 @@ func initFarm(cookie string, state chan string) {
 		OldUserSendWater      []string              `json:"oldUserSendWater"`
 	}
 	a := AutoGenerated{}
-	req := httplib.Post(`https://api.m.jd.com/client.action?functionId=initForFarm`)
-	req.Header("accept", "*/*")
-	req.Header("accept-encoding", "gzip, deflate, br")
-	req.Header("accept-language", "zh-CN,zh;q=0.9")
-	req.Header("cache-control", "no-cache")
+	req := httplib.Get(`https://api.m.jd.com/client.action?functionId=initForFarm&appid=wh5&body=` + url.QueryEscape(`{"version":4,"channel":1,"babelChannel":"120"}`))
 	req.Header("cookie", cookie)
-	req.Header("origin", "https://home.m.jd.com")
-	req.Header("pragma", "no-cache")
-	req.Header("referer", "https://home.m.jd.com/myJd/newhome.action")
-	req.Header("sec-fetch-dest", "empty")
-	req.Header("sec-fetch-mode", "cors")
-	req.Header("sec-fetch-site", "same-site")
 	req.Header("User-Agent", ua())
-	req.Header("Content-Type", "application/x-www-form-urlencoded")
-	req.Body(`body={"version":4}&appid=wh5&clientVersion=9.1.0`)
+	req.SetTimeout(time.Second*10, time.Second*10)
+	if Transport != nil {
+		req.SetTransport(Transport)
+	}
 	data, _ := req.Bytes()
 	json.Unmarshal(data, &a)
-
+	pt_pin := core.FetchCookieValue("pt_pin", cookie)
 	rt := a.FarmUserPro.Name
+	not := ""
 	if rt == "" {
 		rt = "数据异常"
 	} else {
 		if a.TreeState == 2 || a.TreeState == 3 {
 			rt += "已可领取⏰"
+			not = rt
 		} else if a.TreeState == 1 {
 			rt += fmt.Sprintf("种植中，进度%.2f%%🍒", 100*float64(a.FarmUserPro.TreeEnergy)/float64(a.FarmUserPro.TreeTotalEnergy))
 		} else if a.TreeState == 0 {
 			rt = "您忘了种植新的水果⏰"
+			not = rt
 		}
 	}
-	state <- rt
+	if state != nil {
+		state <- rt
+	} else if not != "" {
+		a叉哦叉哦(pt_pin, "东东农场", not)
+	}
 }
 
 func initPetTown(cookie string, state chan string) {
@@ -1118,26 +981,43 @@ func initPetTown(cookie string, state chan string) {
 	req.Header("User-Agent", ua())
 	req.Header("cookie", cookie)
 	req.Header("Content-Type", "application/x-www-form-urlencoded")
+
 	req.Body(`body={}&appid=wh5&loginWQBiz=pet-town&clientVersion=9.0.4`)
+	if Transport != nil {
+		req.SetTransport(Transport)
+	}
 	data, _ := req.Bytes()
 	json.Unmarshal(data, &a)
 	rt := ""
+	pt_pin := core.FetchCookieValue("pt_pin", cookie)
+	not := ""
 	if a.Code == "0" && a.ResultCode == "0" && a.Message == "success" {
 		if a.Result.UserStatus == 0 {
 			rt = "请手动开启活动⏰"
+			not = rt
+
 		} else if a.Result.GoodsInfo.GoodsName == "" {
 			rt = "你忘了选购新的商品⏰"
+			not = rt
+
 		} else if a.Result.PetStatus == 5 {
 			rt = a.Result.GoodsInfo.GoodsName + "已可领取⏰"
+			not = rt
+
 		} else if a.Result.PetStatus == 6 {
 			rt = a.Result.GoodsInfo.GoodsName + "未继续领养新的物品⏰"
+			not = rt
 		} else {
 			rt = a.Result.GoodsInfo.GoodsName + fmt.Sprintf("领养中，进度%.2f%%，勋章%d/%d🐶", a.Result.MedalPercent, a.Result.MedalNum, a.Result.GoodsInfo.ExchangeMedalNum)
 		}
 	} else {
 		rt = "数据异常"
 	}
-	state <- rt
+	if state != nil {
+		state <- rt
+	} else if not != "" {
+		a叉哦叉哦(pt_pin, "东东萌宠", not)
+	}
 }
 
 func jsGold(cookie string, state chan int64) { //
@@ -1175,7 +1055,7 @@ func jsGold(cookie string, state chan int64) { //
 	a := AutoGenerated{}
 	req := httplib.Post(`https://api.m.jd.com?functionId=MyAssetsService.execute&appid=market-task-h5`)
 	req.Header("Accept", "application/json, text/plain, */*")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
+	// req.Header("Accept-Encoding", "gzip, deflate, br")
 	req.Header("Cookie", cookie)
 	req.Header("Content-Type", "application/x-www-form-urlencoded")
 	req.Header("Origin", "https://gold.jd.com")
@@ -1183,21 +1063,25 @@ func jsGold(cookie string, state chan int64) { //
 	req.Header("Connection", "keep-alive")
 	req.Header("User-Agent", ua())
 	req.Header("Referer", "https://gold.jd.com/")
+
 	req.Body(`functionId=MyAssetsService.execute&body={"method":"goldShopPage","data":{"channel":1}}&_t=` + fmt.Sprint(time.Now().Unix()) + `&appid=market-task-h5;`)
 	data, _ := req.Bytes()
 	json.Unmarshal(data, &a)
-	state <- int64(a.Data.BalanceVO.GoldBalance)
+	if state != nil {
+		state <- int64(a.Data.BalanceVO.GoldBalance)
+	}
 }
 
 func jxncEgg(cookie string, state chan int64) {
 	req := httplib.Get("https://m.jingxi.com/jxmc/queryservice/GetHomePageInfo?channel=7&sceneid=1001&activeid=null&activekey=null&isgift=1&isquerypicksite=1&_stk=activeid%2Cactivekey%2Cchannel%2Cisgift%2Cisquerypicksite%2Csceneid&_ste=1&h5st=20210818211830955%3B4408816258824161%3B10028%3Btk01w8db21b2130ny2eg0siAPpNQgBqjGzYfuG6IP7Z%2BAOB40BiqLQ%2Blglfi540AB%2FaQrTduHbnk61ngEeKn813gFeRD%3Bd9a0b833bf99a29ed726cbffa07ba955cc27d1ff7d2d55552878fc18fc667929&_=1629292710957&sceneval=2&g_login_type=1&g_ty=ls")
 	req.Header("User-Agent", ua())
 	req.Header("Host", "m.jingxi.com")
-	req.Header("Accept", "*/*")
+	// req.Header("Accept", "*/*")
 	req.Header("Connection", "keep-alive")
 	req.Header("Accept-Language", "zh-cn")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
+	// req.Header("Accept-Encoding", "gzip, deflate, br")
 	req.Header("Referer", "https://st.jingxi.com/pingou/jxmc/index.html?nativeConfig=%7B%22immersion%22%3A1%2C%22toColor%22%3A%22%23e62e0f%22%7D&;__mcwvt=sjcp&ptag=7155.9.95")
+
 	req.Header("Cookie", cookie)
 	data, _ := req.Bytes()
 
@@ -1286,15 +1170,16 @@ func tytCoupon(cookie string, state chan string) {
 	}
 	a := AutoGenerated{}
 	req := httplib.Get(`https://m.jingxi.com/activeapi/queryjdcouponlistwithfinance?state=1&wxadd=1&filterswitch=1&_=1629296270692&sceneval=2&g_login_type=1&callback=jsonpCBKB&g_ty=ls`)
-	req.Header("Accept", "*/*")
+	// req.Header("Accept", "*/*")
 	req.Header("Connection", "keep-alive")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
+	// req.Header("Accept-Encoding", "gzip, deflate, br")
 	req.Header("Cookie", cookie)
 	req.Header("Content-Type", "application/x-www-form-urlencoded")
 	req.Header("Host", "m.jingxi.com")
 
 	req.Header("User-Agent", ua())
 	req.Header("Referer", "https://st.jingxi.com/my/coupon/jx.shtml?sceneval=2&ptag=7155.1.18")
+
 	data, _ := req.Bytes()
 	res := regexp.MustCompile(`jsonpCBKB[(](.*)\s+[)];}catch`).FindSubmatch(data)
 	rt := ""
@@ -1312,14 +1197,9 @@ func tytCoupon(cookie string, state chan string) {
 			}
 		}
 		if num == 0 {
-			rt = ""
+			rt = "无"
 		} else {
-			rt = fmt.Sprintf("%d张5元优惠券", num)
-			if toexp > 0 {
-				rt += fmt.Sprintf("(今天将过期%d张)⏰", toexp)
-			} else {
-				rt += "🎰"
-			}
+			rt = fmt.Sprintf("%d张5元优惠券(今天过期)", num)
 		}
 	}
 	state <- rt
@@ -1328,12 +1208,13 @@ func tytCoupon(cookie string, state chan string) {
 func mmCoin(cookie string, state chan int64) {
 	req := httplib.Post(`https://api.m.jd.com/client.action`)
 	req.Header("Host", "api.m.jd.com")
-	req.Header("Accept", "application/json, text/plain, */*")
+	// req.Header("Accept", "application/json, text/plain, */*")
 	req.Header("Origin", "https://h5.m.jd.com")
 
 	req.Header("User-Agent", ua())
 	req.Header("cookie", cookie)
 	req.Header("Content-Type", "application/x-www-form-urlencoded")
+
 	req.Body(`uuid=3245ad3d16ab2153c69f9ca91cd2e931b06a3bb8&clientVersion=10.1.0&client=wh5&osVersion=&area=&networkType=wifi&functionId=homePageV2&body=%7B%7D&appid=SecKill2020`)
 	data, _ := req.Bytes()
 	mmc, _ := jsonparser.GetInt(data, "result", "assignment", "assignmentPoints")
@@ -1341,14 +1222,15 @@ func mmCoin(cookie string, state chan int64) {
 }
 
 func jdzz(cookie string, state chan int64) { //
-	req := httplib.Get(`https://api.m.jd.com/client.action?functionId=interactTaskIndex&body={}&client=wh5&clientVersion=9.1.0`)
+	req := httplib.Post(`https://api.m.jd.com/client.action?functionId=interactTaskIndex&body={}&client=wh5&clientVersion=9.1.0`)
 	req.Header("Host", "api.m.jd.com")
 	req.Header("Accept-Language", "zh-cn")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
+	// req.Header("Accept-Encoding", "gzip, deflate, br")
 	req.Header("Referer", "http://wq.jd.com/wxapp/pages/hd-interaction/index/index")
 	req.Header("User-Agent", ua())
 	req.Header("cookie", cookie)
 	req.Header("Content-Type", "application/json")
+
 	data, _ := req.Bytes()
 	mmc, _ := jsonparser.GetString(data, "data", "totalNum")
 	state <- int64(Int(mmc))
@@ -1362,32 +1244,35 @@ func (ck *JdCookie) Available() bool {
 	if ck == nil {
 		return true
 	}
-	req := httplib.Get("https://me-api.jd.com/user_new/info/GetJDUserInfoUnion")
+	req := httplib.Get("https://me-api.jd.com/user_new/info/GetJDUserInfoUnion?orgFlag=JD_PinGou_New&callSource=mainorder&channel=4&isHomewhite=0&sceneval=2&_=" + fmt.Sprint(time.Now().Unix()) + "&sceneval=2&g_login_type=1&g_ty=ls")
 	req.Header("Cookie", cookie)
-	req.Header("Accept", "*/*")
-	req.Header("Accept-Language", "zh-cn,")
-	req.Header("Connection", "keep-alive,")
-	req.Header("Referer", "https://home.m.jd.com/myJd/newhome.action?sceneval=2&ufc=&")
-	req.Header("Host", "me-api.jd.com")
-	req.Header("User-Agent", "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1")
+	req.Header("authority", "me-api.jd.com")
+	// req.Header("accept", "*/*")
+	req.Header("sec-fetch-site", "same-site")
+	req.Header("sec-fetch-mode", "no-cors")
+	req.Header("sec-fetch-dest", "script")
+	req.Header("referer", "https://home.m.jd.com/")
+	req.Header("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")
+	req.Header("User-Agent", ua())
+
 	data, err := req.Bytes()
 	if err != nil {
-		return av2(ck)
+		return av12(ck)
 	}
 	ui := &UserInfoResult{}
 	if nil != json.Unmarshal(data, ui) {
-		return av2(ck)
+		return av12(ck)
 	}
 	switch ui.Retcode {
 	// case "1001": //ck.BeanNum
-	// 	if ui.Msg == "not login" {
+	// 	if ui.Msg == "not login"{
 	// 		return false
 	// 	}
 	case "0":
 		realPin := url.QueryEscape(ui.Data.UserInfo.BaseInfo.CurPin)
 		if realPin != ck.PtPin {
 			if realPin == "" {
-				return av2(ck)
+				return av12(ck)
 			} else {
 				ck.PtPin = realPin
 			}
@@ -1400,7 +1285,83 @@ func (ck *JdCookie) Available() bool {
 		}
 		return true
 	}
-	return av3(ck)
+	return av12(ck)
+}
+
+func av12(ck *JdCookie) bool {
+	type AutoGenerated struct {
+		Sid           string `json:"sid"`
+		DesPin        string `json:"desPin"`
+		UserFlagCheck string `json:"userFlagCheck"`
+		User          struct {
+			Balance               interface{} `json:"balance"`
+			Birthday              string      `json:"birthday"`
+			City                  int         `json:"city"`
+			Code                  interface{} `json:"code"`
+			Companys              string      `json:"companys"`
+			County                int         `json:"county"`
+			Coupon                interface{} `json:"coupon"`
+			Email                 string      `json:"email"`
+			EmployeeInfo          interface{} `json:"employeeInfo"`
+			GiftCard              interface{} `json:"giftCard"`
+			GiftCardPlusgiftECard string      `json:"giftCardPlusgiftECard"`
+			GiftECard             interface{} `json:"giftECard"`
+			HomePage              string      `json:"homePage"`
+			ImgFlag               int         `json:"imgFlag"`
+			ImgURL                string      `json:"imgUrl"`
+			IPAddress             string      `json:"ipAddress"`
+			JingBean              string      `json:"jingBean"`
+			Labels                interface{} `json:"labels"`
+			LastTime              string      `json:"lastTime"`
+			MiddleSchool          string      `json:"middleSchool"`
+			Msn                   string      `json:"msn"`
+			MyJdNavigation        interface{} `json:"myJdNavigation"`
+			PetName               string      `json:"petName"`
+			PlusHeadBkImg         interface{} `json:"plusHeadBkImg"`
+			PlusText              interface{} `json:"plusText"`
+			Province              int         `json:"province"`
+			QianbaoDegradeStatus  bool        `json:"qianbaoDegradeStatus"`
+			Qq                    string      `json:"qq"`
+			RegIP                 string      `json:"regIp"`
+			RegTime               string      `json:"regTime"`
+			Remark                string      `json:"remark"`
+			SchoolID              int         `json:"schoolId"`
+			SchoolYn              int         `json:"schoolYn"`
+			Score                 int         `json:"score"`
+			SecoSchool            string      `json:"secoSchool"`
+			Sex                   int         `json:"sex"`
+			ShopIntegral          interface{} `json:"shopIntegral"`
+			Uclass                string      `json:"uclass"`
+			UnColleger            string      `json:"unColleger"`
+			UnickName             string      `json:"unickName"`
+			UserID                int         `json:"userId"`
+			UserName              string      `json:"userName"`
+			UserPlusStatus        bool        `json:"userPlusStatus"`
+		} `json:"user"`
+	}
+	req := httplib.Get(`https://wxapp.m.jd.com/kwxhome/myJd/home.json?&useGuideModule=0&bizId=&brandId=&fromType=wxapp&timestamp=` + fmt.Sprint(time.Now().Unix()))
+	req.Header("User-Agent", ua())
+	req.Header("Cookie", "pt_key="+ck.PtKey+";pt_pin="+ck.PtPin+";")
+	data, err := req.Bytes()
+	if err != nil {
+		return av2(ck)
+	}
+	code, _ := jsonparser.GetString(data, "code")
+	if code == "999" {
+		return false
+	} else {
+		a := AutoGenerated{}
+		if nil != json.Unmarshal(data, &a) {
+			return av3(ck)
+		}
+		if a.User.UnickName == "" {
+			return av3(ck)
+		}
+		ck.Nickname = a.User.UnickName
+		ck.BeanNum = a.User.JingBean
+		return true
+	}
+
 }
 
 func av2(ck *JdCookie) bool {
@@ -1410,9 +1371,9 @@ func av2(ck *JdCookie) bool {
 	req.Header("Accept", "*/*")
 	req.Header("Connection", "keep-alive")
 	req.Header("Accept-Language", "zh-cn")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
 	req.Header("Referer", "https://st.jingxi.com/my/userinfo.html?&ptag=7205.12.4")
 	req.Header("Cookie", "pt_key="+ck.PtKey+";pt_pin="+ck.PtPin+";")
+
 	data, err := req.Bytes()
 	if err != nil {
 		return true
@@ -1428,8 +1389,8 @@ func av3(ck *JdCookie) bool {
 	req.Header("Accept", "*/*")
 	req.Header("Connection", "keep-alive")
 	req.Header("Accept-Language", "zh-cn")
-	req.Header("Accept-Encoding", "gzip, deflate, br")
 	req.Header("Referer", "https://home.m.jd.com/myJd/newhome.action?sceneval=2&ufc=&")
+
 	req.Header("Cookie", "pt_key="+ck.PtKey+";pt_pin="+ck.PtPin+";")
 	data, err := req.Bytes()
 	if err != nil {
@@ -1641,4 +1602,401 @@ func GetYestodayBean(ck *JdCookie, state chan int) {
 		page++
 	}
 	return
+}
+
+type XBeanDetail struct {
+	Amount      int    `json:"amount"`
+	Createdate  string `json:"createdate"`
+	Visibleinfo string `json:"visibleinfo"`
+}
+
+//欢迎叼毛来抄代码
+func queryuserjingdoudetail(cookie string, e下水道 chan []int) {
+	type AutoGenerated struct {
+		Detail []XBeanDetail `json:"detail"`
+		Ret    int           `json:"ret"`
+		Retmsg string        `json:"retmsg"`
+	}
+	a := AutoGenerated{}
+	req := httplib.Get(`https://m.jingxi.com/activeapi/queryuserjingdoudetail?pagesize=10&type=16&_=` + fmt.Sprint(time.Now().Unix()) + `&sceneval=2&g_login_type=1&g_ty=ls`)
+	req.Header("User-Agent", ua())
+	req.Header("Cookie", cookie)
+	req.Header("authority", "m.jingxi.com")
+	req.Header("accept", "*/*")
+	req.Header("sec-fetch-site", "same-site")
+	req.Header("sec-fetch-mode", "no-cors")
+	req.Header("sec-fetch-dest", "script")
+	req.Header("referer", "https://st.jingxi.com/")
+	req.Header("accept-language", "zh-CN,zh;q=0.9,en;q=0.8")
+
+	data, _ := req.Bytes()
+
+	json.Unmarshal(data, &a)
+	e叼毛 := []int{0, 0, 0, 0, 0}
+	today := time.Now().Local().Format("2006/01/02")
+	yestoday := time.Now().Local().Add(-time.Hour * 24).Format("2006/01/02")
+	for _, v := range a.Detail {
+		e叼毛[0] += v.Amount
+		if strings.Contains(v.Createdate, today) {
+			if v.Amount > 0 {
+				e叼毛[1] += v.Amount
+			} else {
+				e叼毛[2] += -v.Amount
+			}
+		} else if strings.Contains(v.Createdate, yestoday) {
+			if v.Amount > 0 {
+				e叼毛[3] += v.Amount
+			} else {
+				e叼毛[4] += -v.Amount
+			}
+		}
+	}
+	e下水道 <- e叼毛 //叼毛去下水道
+}
+
+//欢迎叼毛来抄代码
+func jingtie(cookie string, e下水道 chan string) {
+	req := httplib.Post(`https://ms.jr.jd.com/gw/generic/jrm/h5/m/channelUserSubsidyInfo`)
+	req.Header("User-Agent", ua())
+	req.Header("Cookie", cookie)
+	req.Body(`"reqData=%7B%22source%22%3A%22H5%22%2C%22channel%22%3A%22default%22%2C%22channelLv%22%3A%22%22%2C%22apiVersion%22%3A%224.0.0%22%2C%22riskDeviceParam%22%3A%22%7B%5C%22macAddress%5C%22%3A%5C%22%5C%22%2C%5C%22imei%5C%22%3A%5C%22%5C%22%2C%5C%22eid%5C%22%3A%5C%22%5C%22%2C%5C%22openUUID%5C%22%3A%5C%22%5C%22%2C%5C%22uuid%5C%22%3A%5C%22%5C%22%2C%5C%22traceIp%5C%22%3A%5C%22%5C%22%2C%5C%22os%5C%22%3A%5C%22%5C%22%2C%5C%22osVersion%5C%22%3A%5C%22%5C%22%2C%5C%22appId%5C%22%3A%5C%22%5C%22%2C%5C%22clientVersion%5C%22%3A%5C%22%5C%22%2C%5C%22resolution%5C%22%3A%5C%22%5C%22%2C%5C%22channelInfo%5C%22%3A%5C%22%5C%22%2C%5C%22networkType%5C%22%3A%5C%22%5C%22%2C%5C%22startNo%5C%22%3A42%2C%5C%22openid%5C%22%3A%5C%22%5C%22%2C%5C%22token%5C%22%3A%5C%22%5C%22%2C%5C%22sid%5C%22%3A%5C%22%5C%22%2C%5C%22terminalType%5C%22%3A%5C%22%5C%22%2C%5C%22longtitude%5C%22%3A%5C%22%5C%22%2C%5C%22latitude%5C%22%3A%5C%22%5C%22%2C%5C%22securityData%5C%22%3A%5C%22%5C%22%2C%5C%22jscContent%5C%22%3A%5C%22%5C%22%2C%5C%22fnHttpHead%5C%22%3A%5C%22%5C%22%2C%5C%22receiveRequestTime%5C%22%3A%5C%22%5C%22%2C%5C%22port%5C%22%3A80%2C%5C%22appType%5C%22%3A%5C%22%5C%22%2C%5C%22deviceType%5C%22%3A%5C%22%5C%22%2C%5C%22fp%5C%22%3A%5C%22%5C%22%2C%5C%22ip%5C%22%3A%5C%22%5C%22%2C%5C%22idfa%5C%22%3A%5C%22%5C%22%2C%5C%22sdkToken%5C%22%3A%5C%22%5C%22%7D%22%2C%22others%22%3A%7B%22shareId%22%3A%22%22%7D%7D"`)
+	data, _ := req.String()
+	e叼毛 := ""
+	res := regexp.MustCompile(`"availableAmount":([^,]+),`).FindStringSubmatch(data)
+	if len(res) > 0 {
+		e叼毛 = res[1]
+	}
+	e下水道 <- e叼毛 //叼毛去下水道
+}
+
+//欢迎叼毛来抄代码
+func jingxiangzhi(cookie string, e下水道 chan string) {
+	req := httplib.Get(`https://wxapp.m.jd.com/kwxhome/myJd/home.json?&useGuideModule=0&bizId=&brandId=&fromType=wxapp&timestamp=` + fmt.Sprint(time.Now().Unix()))
+	req.Header("User-Agent", ua())
+	req.Header("Cookie", cookie)
+	data, _ := req.Bytes()
+	e叼毛, _ := jsonparser.GetString(data, "user", "uclass")
+	e叼毛 = strings.Replace(e叼毛, "京享值", "", -1)
+	e下水道 <- e叼毛 //叼毛去下水道
+}
+
+//欢迎叼毛来抄代码
+func dream(cookie string, state chan string) {
+	type AssistCondition struct {
+		AssistConditionMsg    string `json:"assistConditionMsg"`
+		AssistNumCurrent      int    `json:"assistNumCurrent"`
+		AssistNumLimit        int    `json:"assistNumLimit"`
+		AssistNumMax          int    `json:"assistNumMax"`
+		AssistRemindKey       string `json:"assistRemindKey"`
+		AssistRemindUser      string `json:"assistRemindUser"`
+		CommodityAppLimitFlag int    `json:"commodityAppLimitFlag"`
+		FactoryStatus         int    `json:"factoryStatus"`
+		HireNumLimit          int    `json:"hireNumLimit"`
+		ReAssistFlag          int    `json:"reAssistFlag"`
+		SharePin              string `json:"sharePin"`
+		SharePinHeadImage     string `json:"sharePinHeadImage"`
+	}
+	type AssistMaterialTuanCondition struct {
+		AssistAppFlag    int           `json:"assistAppFlag"`
+		AssistSelfFlag   int           `json:"assistSelfFlag"`
+		CommodityList    []interface{} `json:"commodityList"`
+		LimitTime        int           `json:"limitTime"`
+		MaterialName     string        `json:"materialName"`
+		MaterialPicture  string        `json:"materialPicture"`
+		MaterialStatus   int           `json:"materialStatus"`
+		OutOfStockFlag   int           `json:"outOfStockFlag"`
+		RemindMsg        string        `json:"remindMsg"`
+		SharePin         string        `json:"sharePin"`
+		SharePinNickname string        `json:"sharePinNickname"`
+		StartTime        int           `json:"startTime"`
+		TuanID           string        `json:"tuanId"`
+	}
+	type DeviceList struct {
+		CreateTime  int `json:"createTime"`
+		DeviceDimID int `json:"deviceDimId"`
+		DeviceID    int `json:"deviceId"`
+		FactoryID   int `json:"factoryId"`
+		UpdateTime  int `json:"updateTime"`
+	}
+	type FactoryList struct {
+		CreateTime int    `json:"createTime"`
+		FactoryID  int    `json:"factoryId"`
+		Name       string `json:"name"`
+		UpdateTime int    `json:"updateTime"`
+	}
+	type NewFactoryFlower struct {
+		FactoryFlowerSendFlag int `json:"factoryFlowerSendFlag"`
+		SendElectric          int `json:"sendElectric"`
+	}
+	type PickSiteInfo struct {
+		Address         string `json:"address"`
+		CityID          int    `json:"cityId"`
+		CityName        string `json:"cityName"`
+		CountryID       int    `json:"countryId"`
+		CountryName     string `json:"countryName"`
+		DcID            int    `json:"dcId"`
+		ProvinceID      int    `json:"provinceId"`
+		ProvinceName    string `json:"provinceName"`
+		Sid             int    `json:"sid"`
+		SiteID          string `json:"siteId"`
+		SiteName        string `json:"siteName"`
+		SiteURL         string `json:"siteUrl"`
+		ToastChangeSite bool   `json:"toastChangeSite"`
+		TownID          int    `json:"townId"`
+		TownName        string `json:"townName"`
+		Weight          int    `json:"weight"`
+	}
+	type ProductionList struct {
+		BeginTime        int   `json:"beginTime"`
+		CommodityDimID   int   `json:"commodityDimId"`
+		CreateTime       int   `json:"createTime"`
+		DataMark         int   `json:"dataMark"`
+		DeviceID         int   `json:"deviceId"`
+		EndTime          int   `json:"endTime"`
+		ExchangeStatus   int   `json:"exchangeStatus"`
+		FactoryID        int   `json:"factoryId"`
+		InvestedElectric int   `json:"investedElectric"`
+		NeedElectric     int   `json:"needElectric"`
+		ProductionID     int64 `json:"productionId"`
+		Status           int   `json:"status"`
+		UpdateTime       int   `json:"updateTime"`
+	}
+	type ProductionStage struct {
+		IsReachEnd                 int    `json:"isReachEnd"`
+		ProductionStageAwardStatus int    `json:"productionStageAwardStatus"`
+		ProductionStageProgress    string `json:"productionStageProgress"`
+	}
+	type Speciality struct {
+		FactoryFlowerQualification int `json:"factoryFlowerQualification"`
+		FactoryFlowerStatus        int `json:"factoryFlowerStatus"`
+		SkinQualification          int `json:"skinQualification"`
+		SkinStatus                 int `json:"skinStatus"`
+	}
+	type User struct {
+		CreateTime                int    `json:"createTime"`
+		CurrentLevel              int    `json:"currentLevel"`
+		DataMark                  int    `json:"dataMark"`
+		DeviceID                  string `json:"deviceId"`
+		Electric                  int    `json:"electric"`
+		EncryptPin                string `json:"encryptPin"`
+		HeadImage                 string `json:"headImage"`
+		HongBaoValue              string `json:"hongBaoValue"`
+		IsJXNewUser               int    `json:"isJXNewUser"`
+		IsProductSpecialCommodity int    `json:"isProductSpecialCommodity"`
+		MosaicPin                 string `json:"mosaicPin"`
+		NewPlayerWelfareFlag      int    `json:"newPlayerWelfareFlag"`
+		NextLevelPercent          int    `json:"nextLevelPercent"`
+		Nickname                  string `json:"nickname"`
+		NpcStep                   int    `json:"npcStep"`
+		Pin                       string `json:"pin"`
+		ShareQywx                 string `json:"shareQywx"`
+		UpdateTime                int    `json:"updateTime"`
+		UserIdentity              string `json:"userIdentity"`
+		Xid                       string `json:"xid"`
+		Zone                      string `json:"zone"`
+	}
+	type UserAttrExtInfo struct {
+		Electric              int `json:"electric"`
+		InvestElectricLimDays int `json:"investElectricLimDays"`
+		LastProduceInvestTime int `json:"lastProduceInvestTime"`
+		ProductLimFlag        int `json:"productLimFlag"`
+		RewardType            int `json:"rewardType"`
+		UserType              int `json:"userType"`
+	}
+	type Data struct {
+		AssistCondition             AssistCondition             `json:"assistCondition"`
+		AssistMaterialTuanCondition AssistMaterialTuanCondition `json:"assistMaterialTuanCondition"`
+		DeviceList                  []DeviceList                `json:"deviceList"`
+		FactoryList                 []FactoryList               `json:"factoryList"`
+		NeedSelectPickSite          int                         `json:"needSelectPickSite"`
+		NewFactoryFlower            NewFactoryFlower            `json:"newFactoryFlower"`
+		PickSiteInfo                PickSiteInfo                `json:"pickSiteInfo"`
+		ProductionList              []ProductionList            `json:"productionList"`
+		ProductionStage             ProductionStage             `json:"productionStage"`
+		Speciality                  Speciality                  `json:"speciality"`
+		SystemVersion               string                      `json:"systemVersion"`
+		User                        User                        `json:"user"`
+		UserAttrExtInfo             UserAttrExtInfo             `json:"userAttrExtInfo"`
+	}
+	type AutoGenerated struct {
+		Data    Data   `json:"data"`
+		Msg     string `json:"msg"`
+		NowTime int    `json:"nowTime"`
+		Ret     int    `json:"ret"`
+	}
+	url := "https://m.jingxi.com/dreamfactory/userinfo/GetUserInfo?zone=dream_factory&pin=&sharePin=&shareType=&materialTuanPin=&materialTuanId=&needPickSiteInfo=1&source=&_time=1637631683565&_ts=1637631683565&timeStamp=&_stk=_time,_ts,materialTuanId,materialTuanPin,needPickSiteInfo,pin,sharePin,shareType,source,timeStamp,zone&_ste=1&_=1637631683575&sceneval=2&g_login_type=1&g_ty=ls"
+
+	req := httplib.Get(url)
+	req.Header("Host", "m.jingxi.com")
+	req.Header("Accept", "*/*")
+	req.Header("Connection", "keep-alive")
+	req.Header("Cookie", cookie)
+	req.Header("User-Agent", "jdpingou;"+ua())
+	req.Header("Accept-Language", "zh-cn")
+	req.Header("Referer", "https://st.jingxi.com/pingou/dream_factory/index.html?ptag=7155.9.46")
+	// req.Header("Accept-Encoding", "gzip, deflate, br")
+
+	data, _ := req.Bytes()
+	a := &AutoGenerated{}
+	json.Unmarshal(data, a)
+
+	desc := ""
+	not := true
+	if state != nil {
+		not = false
+	}
+	if len(a.Data.ProductionList) > 0 && len(a.Data.FactoryList) > 0 {
+		var production = a.Data.ProductionList[0]
+		if production.InvestedElectric >= production.NeedElectric {
+			if production.ExchangeStatus == 1 {
+				desc = "可以兑换商品了"
+			}
+			if production.ExchangeStatus == 3 {
+				not = false
+				desc = "商品兑换已超时，请选择新商品进行制造"
+			}
+			// await exchangeProNotify()
+		} else {
+			not = false
+			desc = fmt.Sprintf(`预计最快还需%d天生产完毕`, (production.NeedElectric-production.InvestedElectric)/(2*60*60*24))
+
+		}
+	} else {
+		if len(a.Data.FactoryList) == 0 {
+			not = false
+			desc = "请手动开启活动"
+		} else if len(a.Data.ProductionList) == 0 {
+			not = false
+			desc = "请手动选购商品进行生产"
+		}
+	}
+	if desc == "" {
+		not = false
+	}
+	desc += "🏭"
+	if state != nil {
+		state <- desc
+	}
+	if not {
+		a叉哦叉哦(core.FetchCookieValue("pt_pin", cookie), "京喜工厂", desc)
+	}
+}
+
+func jdsy(cookie string, desc chan string) {
+	type AutoGenerated struct {
+		Success bool        `json:"success"`
+		Code    interface{} `json:"code"`
+		BsCode  interface{} `json:"bsCode"`
+		Message interface{} `json:"message"`
+		Data    struct {
+			List []struct {
+				ActID     int         `json:"actId"`
+				ReportID  interface{} `json:"reportId"`
+				OrderID   interface{} `json:"orderId"`
+				ApplyTime int64       `json:"applyTime"`
+				Status    int         `json:"status"`
+				TrialImg  string      `json:"trialImg"`
+				TrialName string      `json:"trialName"`
+				Text      struct {
+					ID   int    `json:"id"`
+					Text string `json:"text"`
+				} `json:"text"`
+				LeftTime      int `json:"leftTime"`
+				TryButtonList []struct {
+					ID     int         `json:"id"`
+					Text   string      `json:"text"`
+					Schema interface{} `json:"schema"`
+				} `json:"tryButtonList"`
+				Bottom           interface{}   `json:"bottom"`
+				ActType          int           `json:"actType"`
+				TaskType         int           `json:"taskType"`
+				SkuID            string        `json:"skuId"`
+				OrderState       interface{}   `json:"orderState"`
+				Tag              []interface{} `json:"tag"`
+				OrderAmount      interface{}   `json:"orderAmount"`
+				EndTime          int64         `json:"endTime"`
+				SupplierDelivery bool          `json:"supplierDelivery"`
+			} `json:"list"`
+			PageSize int   `json:"pageSize"`
+			Page     int   `json:"page"`
+			SysDate  int64 `json:"sysDate"`
+		} `json:"data"`
+	}
+	rt := ""
+	warn := make(chan string)
+	go func() {
+		req := httplib.Post("https://api.m.jd.com/client.action")
+		req.Header("Host", "api.m.jd.com")
+		req.Header("Content-Type", "application/x-www-form-urlencoded")
+		req.Header("Origin", "https://prodev.m.jd.com")
+		// req.Header("Accept-Encoding", "gzip, deflate, br")
+		req.Header("Cookie", cookie)
+		req.Header("Connection", "keep-alive")
+		req.Header("Accept", "application/json, text/plain, */*")
+		req.Header("User-Agent", ua())
+		// req.Header("Referer", "https://prodev.m.jd.com/mall/active/2Y2YgUu1Xbbv8AfN7TAHhNqfQrAV/index.html?tttparams=eliIVi1eyJncHNfYXJlYSI6IjEyXzkzOV8yMzY4M181NjE4NCIsInByc3RhdGUiOiIwIiwidW5fYXJlYSI6IjEyXzkzOV8yMzY4M181NjE4NCIsIm1vZGVsIjoiaVBob25lMTAsMiIsImdMYXQiOiIzMy4yOTQ5MyIsImdMbmciOiIxMjAuMTQ4MjMyIiwibG5nIjoiMTIwLjE1MDMyMyIsImxhdCI6IjMzLjI5NTUzNi7J9&sid=a2e1c9b3b215a2337517cd01f2e04cbw&un_area=12_939_23683_56184")
+		// req.Header("Content-Length", "332")
+		// req.Header("Accept-Language", "zh-cn")
+		req.Body(`appid=newtry&functionId=try_MyTrials&uuid=3345ad3d16ab2153c69f8ca91cd3e931b06a3bb8&clientVersion=10.2.7&client=wh5&osVersion=14.7.1&area=12_939_23683_56184&networkType=wifi&body=%7B%22geo%22%3A%7B%22lng%22%3A121.15326252577907%2C%22lat%22%3A34.295611038697575%7D%2C%22page%22%3A1%2C%22selected%22%3A2%2C%22previewTime%22%3A%22%22%7D`)
+		//appid=newtry&functionId=try_MyTrials&uuid=3345ad3d16ab2153c69f8ca91cd3e931b06a3bb8&clientVersion=10.2.7&client=wh5&osVersion=14.7.1&area=12_939_23683_56184&networkType=wifi&body=%7B%22geo%22%3A%7B%22lng%22%3A121.15326252577907%2C%22lat%22%3A34.295611038697575%7D%2C%22page%22%3A1%2C%22selected%22%3A1%2C%22previewTime%22%3A%22%22%7D
+		data, _ := req.Bytes()
+		// fmt.Println(string(data))
+		a := &AutoGenerated{}
+		json.Unmarshal(data, a)
+		// fmt.Println(a)
+		for _, v := range a.Data.List {
+			if len(v.TryButtonList) == 2 {
+				if v.TryButtonList[0].ID <= 2 {
+					warn <- "你有一个商品待领取，详情：" + v.TrialName + "👆"
+					return
+				}
+			}
+		}
+		warn <- ""
+	}()
+	if rt == "" {
+		req := httplib.Post("https://api.m.jd.com/client.action")
+		req.Header("Host", "api.m.jd.com")
+		req.Header("Content-Type", "application/x-www-form-urlencoded")
+		req.Header("Origin", "https://prodev.m.jd.com")
+		// req.Header("Accept-Encoding", "gzip, deflate, br")
+		req.Header("Cookie", cookie)
+		req.Header("Connection", "keep-alive")
+		req.Header("Accept", "application/json, text/plain, */*")
+		req.Header("User-Agent", ua())
+		// req.Header("Referer", "https://prodev.m.jd.com/mall/active/2Y2YgUu1Xbbv8AfN7TAHhNqfQrAV/index.html?tttparams=eliIVi1eyJncHNfYXJlYSI6IjEyXzkzOV8yMzY4M181NjE4NCIsInByc3RhdGUiOiIwIiwidW5fYXJlYSI6IjEyXzkzOV8yMzY4M181NjE4NCIsIm1vZGVsIjoiaVBob25lMTAsMiIsImdMYXQiOiIzMy4yOTQ5MyIsImdMbmciOiIxMjAuMTQ4MjMyIiwibG5nIjoiMTIwLjE1MDMyMyIsImxhdCI6IjMzLjI5NTUzNi7J9&sid=a2e1c9b3b215a2337517cd01f2e04cbw&un_area=12_939_23683_56184")
+		// req.Header("Content-Length", "332")
+		// req.Header("Accept-Language", "zh-cn")
+		req.Body(`appid=newtry&functionId=try_MyTrials&uuid=3345ad3d16ab2153c69f8ca91cd3e931b06a3bb8&clientVersion=10.2.7&client=wh5&osVersion=14.7.1&area=12_939_23683_56184&networkType=wifi&body=%7B%22geo%22%3A%7B%22lng%22%3A121.15326252577907%2C%22lat%22%3A34.295611038697575%7D%2C%22page%22%3A1%2C%22selected%22%3A1%2C%22previewTime%22%3A%22%22%7D`)
+
+		data, _ := req.Bytes()
+		// fmt.Println(string(data))
+		a := &AutoGenerated{}
+		json.Unmarshal(data, a)
+		// fmt.Println(a)
+		rt = fmt.Sprintf("%d件商品申请中", len(a.Data.List))
+	}
+	if xx := <-warn; xx != "" {
+		rt = xx
+	}
+	desc <- rt
+}
+
+func cwwjf(cookie string, desc chan int) {
+	req := httplib.Post("https://api.m.jd.com/api?appid=jdchoujiang_h5&functionId=giftGetBeanConfigs&body={%22reqSource%22:%22h5%22}")
+	req.Header("Host", "api.m.jd.com")
+	// req.Header("Content-Type", "application/x-www-form-urlencoded")
+	req.Header("Origin", "https://h5.m.jd.com")
+	// req.Header("Accept-Encoding", "gzip, deflate, br")
+	req.Header("Cookie", cookie)
+	// req.Header("Connection", "keep-alive")
+	req.Header("Accept", "application/json, text/plain, */*")
+	req.Header("User-Agent", ua())
+	// req.Header("Referer", "https://prodev.m.jd.com/mall/active/2Y2YgUu1Xbbv8AfN7TAHhNqfQrAV/index.html?tttparams=eliIVi1eyJncHNfYXJlYSI6IjEyXzkzOV8yMzY4M181NjE4NCIsInByc3RhdGUiOiIwIiwidW5fYXJlYSI6IjEyXzkzOV8yMzY4M181NjE4NCIsIm1vZGVsIjoiaVBob25lMTAsMiIsImdMYXQiOiIzMy4yOTQ5MyIsImdMbmciOiIxMjAuMTQ4MjMyIiwibG5nIjoiMTIwLjE1MDMyMyIsImxhdCI6IjMzLjI5NTUzNi7J9&sid=a2e1c9b3b215a2337517cd01f2e04cbw&un_area=12_939_23683_56184")
+	// req.Header("Content-Length", "332")
+	// req.Header("Accept-Language", "zh-cn")
+	// req.Body(`appid=newtry&functionId=try_MyTrials&uuid=3345ad3d16ab2153c69f8ca91cd3e931b06a3bb8&clientVersion=10.2.7&client=wh5&osVersion=14.7.1&area=12_939_23683_56184&networkType=wifi&body=%7B%22geo%22%3A%7B%22lng%22%3A121.15326252577907%2C%22lat%22%3A34.295611038697575%7D%2C%22page%22%3A1%2C%22selected%22%3A1%2C%22previewTime%22%3A%22%22%7D`)
+	data, _ := req.Bytes()
+	coin, _ := jsonparser.GetInt(data, "data", "petCoin")
+	desc <- int(coin)
 }
