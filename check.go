@@ -69,7 +69,7 @@ func initCheck() {
 						continue
 					}
 					s.Reply(fmt.Sprintf("%s,JD_COOKIE已失效。", pin), core.E, core.N)
-					Notify(pin, fmt.Sprintf("您的账号(%s)已过期，请及时登录。", pin))
+					Notify(pin, fmt.Sprintf("您的账号(%s)已过期，请及时发生CK。", pin))
 					if _, err := qinglong.Req(qls[0], qinglong.PUT, qinglong.ENVS, "/disable", []byte(`["`+env.ID+`"]`)); err != nil {
 						s.Reply(fmt.Sprintf("%s,JD_COOKIE禁用失败。%v", pin, err), core.E)
 					} else {
