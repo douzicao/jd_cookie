@@ -22,19 +22,22 @@ func init() {
 	}
 	initAsset()
 	initCheck()
+	initEnEn()
 	initEnv()
+	initHelp()
 	initLogin()
 	initSubmit()
+	initTyt()
 	initNotify()
 	buildHttpTransportWithProxy()
 	if Transport != nil {
-		logs.Info("可口的双层之芝士夹心饼。")
+		logs.Info("douzicao")
 	} else {
-		logs.Info("美味的芝士夹心饼。")
+		logs.Info("douzicao")
 	}
 	logs.Info(
-		"芝士推荐您使用零内置、纯内助、安全的、高优化、稳定的、高性能的仓库，目前只收集日常活动脚本，拉库命令：%s",
-		`ql repo https://github.com/Annyoo2021/scripts.git "jd_|jx_|^long_|getJDCookie" "activity|backUp|docker|own" "^jd[^_]|USER|^JD[^_]sign_|utils|function|ZooFaker_Necklace|JDJRValidator_Pure|sign_graphics_validate"`,
+		"douzicao%s",
+		`douzicao`,
 	)
 }
 

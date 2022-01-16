@@ -7,7 +7,6 @@ import (
 
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/douzicao/sillyGirl/develop/qinglong"
-	"github.com/gin-gonic/gin"
 )
 
 var pinQQ = core.NewBucket("pinQQ")
