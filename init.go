@@ -33,7 +33,7 @@ func init() {
 		logs.Info("美味的芝士夹心饼。")
 	}
 	logs.Info(
-		"芝士“"
+		"芝士"
 	)
 }
 
