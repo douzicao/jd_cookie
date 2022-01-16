@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
-	"github.com/cdle/sillyGirl/core"
-	"github.com/cdle/sillyGirl/develop/qinglong"
+	"github.com/douzicao/sillyGirl/core"
+	"github.com/douzicao/sillyGirl/develop/qinglong"
 	"golang.org/x/net/proxy"
 )
 
