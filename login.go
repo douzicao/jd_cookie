@@ -11,7 +11,7 @@ import (
 	"github.com/beego/beego/v2/client/httplib"
 	"github.com/buger/jsonparser"
 	"github.com/douzicao/sillyGirl/core"
-	"github.com/douzicaoq/sillyGirl/develop/qinglong"
+	"github.com/douzicao/sillyGirl/develop/qinglong"
 )
 
 var jd_cookie = core.NewBucket("jd_cookie")
