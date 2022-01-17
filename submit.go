@@ -209,16 +209,7 @@ func initSubmit() {
 					}
 
 					value := fmt.Sprintf("pt_key=%s;pt_pin=%s;", ck.PtKey, ck.PtPin)
-					if jd_cookie.Get("xdd_url") != "" && !fake {
-						if qq == "" {
-							s.Reply("请在30秒内输入QQ号：")
-							s.Await(s, func(s core.Sender) interface{} {
-								qq = s.GetContent()
-								return "OK"
-							}, `^\d+$`, time.Second*30)
-						}
-						xdd(value, qq)
-					}
+
 
 					qls := []*qinglong.QingLong{}
 					if strings.Contains(jd_cookie.Get("bus"), ck.PtPin) {

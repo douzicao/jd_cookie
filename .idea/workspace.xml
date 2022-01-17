@@ -5,17 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0c5ffde6-fbd0-4c37-8252-73d599211628" name="变更" comment="douzicao">
-      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/help.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/name.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/asset.go" beforeDir="false" afterPath="$PROJECT_DIR$/asset.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/check.go" beforeDir="false" afterPath="$PROJECT_DIR$/check.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/env.go" beforeDir="false" afterPath="$PROJECT_DIR$/env.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/init.go" beforeDir="false" afterPath="$PROJECT_DIR$/init.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/login.go" beforeDir="false" afterPath="$PROJECT_DIR$/login.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notify.go" beforeDir="false" afterPath="$PROJECT_DIR$/notify.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/submit.go" beforeDir="false" afterPath="$PROJECT_DIR$/submit.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -29,6 +21,7 @@
   </component>
   <component name="ProjectId" id="20E3CqKGy8QB1YWMmpuP7c66wp2" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <OptionsSetting value="false" id="Update" />
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -40,7 +33,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../jd_cookie-1/init.go" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../jd_cookie-1" />
     <property name="two.files.diff.last.used.file" value="$PROJECT_DIR$/../jd_cookie-1/init.go" />
     <property name="two.files.diff.last.used.folder" value="$PROJECT_DIR$/../jd_cookie-1" />
   </component>
@@ -52,13 +45,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1635595794886</updated>
-    </task>
-    <task id="LOCAL-00001" summary="douzicao">
-      <created>1635595885723</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1635595885723</updated>
     </task>
     <task id="LOCAL-00002" summary="douzicao">
       <created>1635595916036</created>
@@ -396,7 +382,14 @@
       <option name="project" value="LOCAL" />
       <updated>1642338906310</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="douzicao">
+      <created>1642339734116</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1642339734117</updated>
+    </task>
+    <option name="localTasksCounter" value="51" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
