@@ -176,7 +176,6 @@ func initSubmit() {
 					return "不支持此功能。"
 				}
 				imType := s.GetImType()
-				fake := false
 				if strings.HasPrefix(imType, "_") {
 					imType = strings.Replace(imType, "_", "", -1)
 				}
