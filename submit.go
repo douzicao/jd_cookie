@@ -178,7 +178,6 @@ func initSubmit() {
 				imType := s.GetImType()
 				fake := false
 				if strings.HasPrefix(imType, "_") {
-					fake = true
 					imType = strings.Replace(imType, "_", "", -1)
 				}
 				if imType == "wxsv" && !s.IsAdmin() {
@@ -202,11 +201,6 @@ func initSubmit() {
 						s.Reply("请修改昵称！")
 					}
 
-					qq := ""
-
-					if imType == "qq" {
-						qq = s.GetUserID()
-					}
 
 					value := fmt.Sprintf("pt_key=%s;pt_pin=%s;", ck.PtKey, ck.PtPin)
 
