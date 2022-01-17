@@ -23,7 +23,6 @@ func init() {
 	initAsset()
 	initCheck()
 	initEnv()
-	initHelp()
 	initLogin()
 	initSubmit()
 	initNotify()
