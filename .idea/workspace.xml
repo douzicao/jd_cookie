@@ -41,20 +41,6 @@
       <option name="presentableId" value="Default" />
       <updated>1635595794886</updated>
     </task>
-    <task id="LOCAL-00003" summary="douzicao">
-      <created>1635598809460</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1635598809460</updated>
-    </task>
-    <task id="LOCAL-00004" summary="douzicao">
-      <created>1635598894289</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1635598894289</updated>
-    </task>
     <task id="LOCAL-00005" summary="douzicao">
       <created>1635602629349</created>
       <option name="number" value="00005" />
@@ -384,7 +370,21 @@
       <option name="project" value="LOCAL" />
       <updated>1642432001611</updated>
     </task>
-    <option name="localTasksCounter" value="52" />
+    <task id="LOCAL-00052" summary="douzicao">
+      <created>1642432426143</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1642432426143</updated>
+    </task>
+    <task id="LOCAL-00053" summary="douzicao">
+      <created>1642432468993</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1642432468993</updated>
+    </task>
+    <option name="localTasksCounter" value="54" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
