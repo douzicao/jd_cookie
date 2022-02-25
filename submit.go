@@ -41,6 +41,24 @@ func initSubmit() {
 			},
 		},
 		{
+			Rules: []string{`unbind`},
+			Handle: func(s core.Sender) interface{} {
+				s.Disappear(time.Second * 40)
+
+				uid := fmt.Sprint(s.GetUserID())
+
+				pin := pin(s.GetImType())
+				pin.Foreach(func(k, v []byte) error {
+					if string(v) == uid {
+						s.Reply(fmt.Sprintf("已解绑，%s。", string(k)))
+						pin.Set(string(k), "")
+					}
+					return nil
+				})
+				return "操作完成"
+			},
+		},
+		{
 			Rules:   []string{`raw pt_key=([^;=\s]+);\s*pt_pin=([^;=\s]+)`},
 			FindAll: true,
 			Handle: func(s core.Sender) interface{} {
