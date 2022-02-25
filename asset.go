@@ -147,7 +147,7 @@ func initAsset() {
 	}
 	core.AddCommand("jd", []core.Function{
 		{
-			Rules: []string{`asset ?`, `raw ^` + jd_cookie.Get("asset_query_alias", "查询所有") + ` (\S+)$`},
+			Rules: []string{`asset ?`, `raw ^` + jd_cookie.Get("asset_query_alias", "查询") + ` (\S+)$`},
 			Admin: true,
 			Handle: func(s core.Sender) interface{} {
 				if s.GetImType() == "wxsv" && !s.IsAdmin() && jd_cookie.GetBool("ban_wxsv") {
