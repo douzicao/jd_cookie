@@ -1610,9 +1610,7 @@ func dream(cookie string, state chan string) {
 	json.Unmarshal(data, a)
 
 	desc := ""
-	not := true
 	if state != nil {
-		not = false
 	}
 	if len(a.Data.ProductionList) > 0 && len(a.Data.FactoryList) > 0 {
 		var production = a.Data.ProductionList[0]
@@ -1621,26 +1619,24 @@ func dream(cookie string, state chan string) {
 				desc = "可以兑换商品了"
 			}
 			if production.ExchangeStatus == 3 {
-				not = false
 				desc = "商品兑换已超时，请选择新商品进行制造"
 			}
 			// await exchangeProNotify()
 		} else {
-			not = false
 			desc = fmt.Sprintf(`预计最快还需%d天生产完毕`, (production.NeedElectric-production.InvestedElectric)/(2*60*60*24))
 
 		}
 	} else {
 		if len(a.Data.FactoryList) == 0 {
-			not = false
+
 			desc = "请手动开启活动"
 		} else if len(a.Data.ProductionList) == 0 {
-			not = false
+
 			desc = "请手动选购商品进行生产"
 		}
 	}
 	if desc == "" {
-		not = false
+
 	}
 	desc += "🏭"
 	if state != nil {
