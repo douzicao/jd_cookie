@@ -664,9 +664,7 @@ func initFarm(cookie string, state chan string) {
 	}
 	data, _ := req.Bytes()
 	json.Unmarshal(data, &a)
-	pt_pin := core.FetchCookieValue("pt_pin", cookie)
 	rt := a.FarmUserPro.Name
-	not := ""
 	if rt == "" {
 		rt = "数据异常"
 	} else {
