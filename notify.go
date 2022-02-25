@@ -140,6 +140,7 @@ func initNotify() {
 			time.Sleep(time.Second * 30)
 		}
 	}()
+
 }
 
 func pushpluspush(title, content, token string) {

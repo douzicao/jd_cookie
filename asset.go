@@ -682,8 +682,6 @@ func initFarm(cookie string, state chan string) {
 	}
 	if state != nil {
 		state <- rt
-	} else if not != "" {
-		a叉哦叉哦(pt_pin, "东东农场", not)
 	}
 }
 
@@ -797,8 +795,6 @@ func initPetTown(cookie string, state chan string) {
 	}
 	if state != nil {
 		state <- rt
-	} else if not != "" {
-		a叉哦叉哦(pt_pin, "东东萌宠", not)
 	}
 }
 
@@ -1658,9 +1654,6 @@ func dream(cookie string, state chan string) {
 	desc += "🏭"
 	if state != nil {
 		state <- desc
-	}
-	if not {
-		a叉哦叉哦(core.FetchCookieValue("pt_pin", cookie), "京喜工厂", desc)
 	}
 }
 
