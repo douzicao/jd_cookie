@@ -21,7 +21,6 @@ func init() {
 		return
 	}
 	initAsset()
-	initCheck()
 	initLogin()
 	initSubmit()
 	initNotify()
