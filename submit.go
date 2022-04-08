@@ -3,7 +3,8 @@ package jd_cookie
 import (
 	"fmt"
 	"strings"
-        "time"
+	"time"
+
 	"github.com/douzicao/sillyGirl/core"
 	"github.com/douzicao/sillyGirl/develop/qinglong"
 )
